@@ -92,5 +92,84 @@
     "tasks_total": 4,
     "habits_completed": 1,
     "habits_total": 3
+  },
+  "group_progress": {
+    "group_name": "Sunrise Striders",
+    "mission": "Keep the sunrise streak alive with your closest friends.",
+    "challenge": {
+      "id": "challenge-sunrise-circuit",
+      "title": "30-Day Sunrise Circuit",
+      "timeframe": "Day 18 of 30",
+      "goal": 30,
+      "current": 18,
+      "unit": "sessions"
+    },
+    "leaderboard": [
+      {
+        "id": "wendy",
+        "name": "Wendy",
+        "avatar_color": "#F97316",
+        "progress": 18,
+        "streak": 6
+      },
+      {
+        "id": "nora",
+        "name": "Nora",
+        "avatar_color": "#FDBA74",
+        "progress": 17,
+        "streak": 8
+      },
+      {
+        "id": "theo",
+        "name": "Theo",
+        "avatar_color": "#FBBF24",
+        "progress": 16,
+        "streak": 5
+      },
+      {
+        "id": "mira",
+        "name": "Mira",
+        "avatar_color": "#F97316",
+        "progress": 15,
+        "streak": 4
+      }
+    ],
+    "activity_feed": [
+      {
+        "id": "activity-nora-run",
+        "member_id": "nora",
+        "summary": "Nora logged a sunrise trail run along the coastal ridge.",
+        "timestamp": "2023-12-06T07:10:00",
+        "highlight": "New personal best pace!",
+        "reactions": [
+          { "id": "cheer", "emoji": "🎉", "label": "Cheer", "count": 4 },
+          { "id": "power", "emoji": "💪", "label": "Power Up", "count": 2 }
+        ]
+      },
+      {
+        "id": "activity-theo-playlist",
+        "member_id": "theo",
+        "summary": "Theo shared a 20-minute power-up playlist for tomorrow's circuit.",
+        "timestamp": "2023-12-06T08:45:00",
+        "reactions": [
+          { "id": "spark", "emoji": "⚡", "label": "Spark", "count": 3 }
+        ]
+      },
+      {
+        "id": "activity-mira-checkin",
+        "member_id": "mira",
+        "summary": "Mira completed a focused breathwork reset before the design sprint.",
+        "timestamp": "2023-12-06T09:15:00",
+        "reactions": [
+          { "id": "cheer", "emoji": "🎉", "label": "Cheer", "count": 2 },
+          { "id": "spark", "emoji": "⚡", "label": "Spark", "count": 1 }
+        ]
+      }
+    ],
+    "reaction_options": [
+      { "id": "cheer", "emoji": "🎉", "label": "Cheer" },
+      { "id": "power", "emoji": "💪", "label": "Power Up" },
+      { "id": "spark", "emoji": "⚡", "label": "Spark" }
+    ]
   }
 }

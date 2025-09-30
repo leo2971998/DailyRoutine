@@ -20,8 +20,8 @@ import GreetingCard from './components/GreetingCard';
 import ChecklistCard from './components/ChecklistCard';
 import ScheduleCard from './components/ScheduleCard';
 import HabitBoard from './components/HabitBoard';
-import FocusFriends from './components/FocusFriends';
 import ProgressPanel from './components/ProgressPanel';
+import GroupProgress from './components/GroupProgress';
 
 const navItems = [
   { label: 'Overview', icon: FiGrid },
@@ -177,7 +177,7 @@ function App() {
             </Stack>
 
             <Box flexBasis={{ base: '100%', xl: '320px' }}>
-              <FocusFriends />
+              <GroupProgress data={data.group_progress} />
             </Box>
           </Flex>
         </Stack>
