@@ -9,10 +9,11 @@ import {
   useColorModeValue
 } from '@chakra-ui/react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { updateHabit } from '../api/dashboard';
 import { Habit } from '../api/types';
 import { DASHBOARD_QUERY_KEY } from '../hooks/useDashboard';
-import { updateHabit } from '../api/dashboard';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import CardContainer from './ui/CardContainer';
 
 interface HabitBoardProps {
   habits: Habit[];
@@ -20,11 +21,6 @@ interface HabitBoardProps {
 
 const HabitBoard = ({ habits }: HabitBoardProps) => {
   const queryClient = useQueryClient();
-  const cardBg = useColorModeValue(
-    'linear-gradient(135deg, rgba(255, 255, 255, 0.97), rgba(255, 237, 213, 0.92))',
-    'gray.800'
-  );
-  const border = useColorModeValue('rgba(251, 191, 36, 0.3)', 'gray.700');
 
   const mutation = useMutation({
     mutationFn: ({ id, completed_today }: { id: string; completed_today: number }) =>
@@ -54,36 +50,8 @@ const HabitBoard = ({ habits }: HabitBoardProps) => {
   });
 
   return (
-    <Box
-      bg={cardBg}
-      borderRadius="22px"
-      borderWidth="1px"
-      borderColor={border}
-      p={{ base: 5, md: 8 }}
-      boxShadow="0 12px 40px rgba(217, 119, 6, 0.16)"
-      h="100%"
-      position="relative"
-      overflow="hidden"
-    >
-      <Box
-        position="absolute"
-        top={-20}
-        right={-30}
-        w="200px"
-        h="200px"
-        borderRadius="full"
-        bg="rgba(249, 115, 22, 0.18)"
-      />
-      <Box
-        position="absolute"
-        bottom={-40}
-        left={-20}
-        w="240px"
-        h="240px"
-        borderRadius="full"
-        bg="rgba(250, 204, 21, 0.22)"
-      />
-      <Stack spacing={6} h="100%">
+    <CardContainer surface="muted">
+      <Stack spacing={6} h="100%" position="relative" zIndex={1}>
         <Stack spacing={1}>
           <Text fontSize="lg" fontWeight="semibold" color="brand.800">
             Habit Momentum
@@ -99,7 +67,14 @@ const HabitBoard = ({ habits }: HabitBoardProps) => {
           ))}
         </SimpleGrid>
       </Stack>
-    </Box>
+      <Box
+        position="absolute"
+        inset={0}
+        opacity={0.14}
+        backgroundImage="radial-gradient(circle at 10% 18%, rgba(249, 115, 22, 0.22), transparent 60%)"
+        pointerEvents="none"
+      />
+    </CardContainer>
   );
 };
 
@@ -109,8 +84,8 @@ interface HabitCardProps {
 }
 
 const HabitCard = ({ habit, onUpdate }: HabitCardProps) => {
-  const accent = useColorModeValue('rgba(255, 255, 255, 0.82)', 'whiteAlpha.200');
-  const border = useColorModeValue('rgba(251, 191, 36, 0.35)', 'whiteAlpha.300');
+  const accent = useColorModeValue('rgba(255, 255, 255, 0.9)', 'whiteAlpha.200');
+  const border = useColorModeValue('rgba(251, 191, 36, 0.28)', 'whiteAlpha.300');
   const percent = Math.min((habit.completed_today / habit.goal_per_day) * 100, 100);
 
   const chartData = habit.weekly_progress.map((value, index) => ({
@@ -126,29 +101,20 @@ const HabitCard = ({ habit, onUpdate }: HabitCardProps) => {
       bg={accent}
       borderWidth="1px"
       borderColor={border}
-      boxShadow="0 10px 28px rgba(217, 119, 6, 0.14)"
+      boxShadow="0 8px 24px rgba(217, 119, 6, 0.14)"
       position="relative"
       overflow="hidden"
     >
       <Box
         position="absolute"
         top={-20}
-        left={-30}
-        w="140px"
-        h="140px"
+        left={-20}
+        w="120px"
+        h="120px"
         borderRadius="full"
-        bg="rgba(251, 146, 60, 0.18)"
+        bg="rgba(251, 146, 60, 0.16)"
       />
-      <Box
-        position="absolute"
-        bottom={-24}
-        right={-24}
-        w="160px"
-        h="160px"
-        borderRadius="full"
-        bg="rgba(250, 204, 21, 0.18)"
-      />
-      <Stack spacing={1}>
+      <Stack spacing={1} position="relative" zIndex={1}>
         <Text fontWeight="semibold" color="brand.800">
           {habit.title}
         </Text>
@@ -157,7 +123,7 @@ const HabitCard = ({ habit, onUpdate }: HabitCardProps) => {
         </Text>
       </Stack>
       <Progress value={percent} borderRadius="full" colorScheme="orange" bg="rgba(251, 191, 36, 0.2)" />
-      <Box h="120px">
+      <Box h="120px" position="relative" zIndex={1}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={chartData}>
             <Tooltip
@@ -181,7 +147,7 @@ const HabitCard = ({ habit, onUpdate }: HabitCardProps) => {
           </BarChart>
         </ResponsiveContainer>
       </Box>
-      <HStack justify="space-between">
+      <HStack justify="space-between" position="relative" zIndex={1}>
         <Button
           size="sm"
           variant="ghost"

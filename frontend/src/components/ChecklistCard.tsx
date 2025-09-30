@@ -14,6 +14,7 @@ import { FiClock } from 'react-icons/fi';
 import { RoutineTask } from '../api/types';
 import { toggleTask } from '../api/dashboard';
 import { DASHBOARD_QUERY_KEY } from '../hooks/useDashboard';
+import CardContainer from './ui/CardContainer';
 
 interface ChecklistCardProps {
   checklist: RoutineTask[];
@@ -26,27 +27,12 @@ const categoryColors: Record<string, string> = {
   personal: 'brand.300'
 };
 
-const categoryIllustrations: Record<string, string> = {
-  wellness:
-    'linear-gradient(135deg, rgba(253, 224, 71, 0.9), rgba(249, 115, 22, 0.85))',
-  focus: 'linear-gradient(135deg, rgba(251, 146, 60, 0.9), rgba(234, 88, 12, 0.85))',
-  collaboration:
-    'linear-gradient(135deg, rgba(250, 204, 21, 0.9), rgba(253, 186, 116, 0.85))',
-  personal: 'linear-gradient(135deg, rgba(255, 237, 213, 0.95), rgba(251, 191, 36, 0.85))'
-};
-
 const ChecklistCard = ({ checklist }: ChecklistCardProps) => {
   const queryClient = useQueryClient();
-  const cardBg = useColorModeValue(
-    'linear-gradient(150deg, rgba(255, 255, 255, 0.97), rgba(255, 237, 213, 0.92))',
-    'gray.800'
-  );
-  const border = useColorModeValue('rgba(251, 191, 36, 0.35)', 'gray.700');
-  const rowBg = useColorModeValue('rgba(255, 255, 255, 0.86)', 'whiteAlpha.200');
+  const rowBg = useColorModeValue('rgba(255, 255, 255, 0.9)', 'whiteAlpha.200');
 
   const mutation = useMutation({
-    mutationFn: ({ id, completed }: { id: string; completed: boolean }) =>
-      toggleTask(id, completed),
+    mutationFn: ({ id, completed }: { id: string; completed: boolean }) => toggleTask(id, completed),
     onMutate: async ({ id, completed }) => {
       await queryClient.cancelQueries({ queryKey: DASHBOARD_QUERY_KEY });
       const previous = queryClient.getQueryData(DASHBOARD_QUERY_KEY);
@@ -79,23 +65,8 @@ const ChecklistCard = ({ checklist }: ChecklistCardProps) => {
   }, {});
 
   return (
-    <Box
-      bg={cardBg}
-      borderRadius="22px"
-      borderWidth="1px"
-      borderColor={border}
-      p={{ base: 5, md: 8 }}
-      boxShadow="0 12px 40px rgba(217, 119, 6, 0.16)"
-      position="relative"
-      overflow="hidden"
-    >
-      <Box
-        position="absolute"
-        inset={0}
-        opacity={0.3}
-        backgroundImage="url('data:image/svg+xml,%3Csvg width=\'480\' height=\'320\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg stroke=\'rgba(255,255,255,0.45)\' stroke-width=\'0.8\' fill=\'none\'%3E%3Cpath d=\'M30 100c28-40 56-40 84 0s56 40 84 0 56-40 84 0 56 40 84 0\'/%3E%3C/g%3E%3C/svg%3E')"
-      />
-      <Stack spacing={6}>
+    <CardContainer surface="muted">
+      <Stack spacing={6} position="relative" zIndex={1}>
         <Stack spacing={1}>
           <Text fontSize="lg" fontWeight="semibold" color="brand.800">
             Daily Routine Checklist
@@ -107,9 +78,9 @@ const ChecklistCard = ({ checklist }: ChecklistCardProps) => {
 
         <VStack align="stretch" spacing={5}>
           {Object.entries(grouped).map(([category, tasks]) => (
-            <Stack key={category} spacing={4} position="relative">
+            <Stack key={category} spacing={4}>
               <Badge
-                bg={`${categoryColors[category] || 'brand.500'}33`}
+                bg={`${categoryColors[category] || 'brand.500'}1F`}
                 color={categoryColors[category] || 'brand.500'}
                 alignSelf="flex-start"
                 borderRadius="full"
@@ -126,13 +97,13 @@ const ChecklistCard = ({ checklist }: ChecklistCardProps) => {
                     p={4}
                     borderRadius="18px"
                     bg={rowBg}
-                    boxShadow="0 8px 24px rgba(217, 119, 6, 0.12)"
                   >
                     <Box
                       w="46px"
                       h="46px"
                       borderRadius="16px"
-                      bg={categoryIllustrations[category] || categoryIllustrations.focus}
+                      bg={`${categoryColors[category] || 'brand.500'}33`}
+                      border="1px solid rgba(251, 191, 36, 0.25)"
                       flexShrink={0}
                     />
                     <Checkbox
@@ -162,7 +133,14 @@ const ChecklistCard = ({ checklist }: ChecklistCardProps) => {
           ))}
         </VStack>
       </Stack>
-    </Box>
+      <Box
+        position="absolute"
+        inset={0}
+        opacity={0.16}
+        backgroundImage="radial-gradient(circle at 14% 18%, rgba(249, 115, 22, 0.18), transparent 55%)"
+        pointerEvents="none"
+      />
+    </CardContainer>
   );
 };
 

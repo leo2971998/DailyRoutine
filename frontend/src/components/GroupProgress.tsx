@@ -9,38 +9,23 @@ import {
   Progress,
   Stack,
   Text,
-  useColorModeValue,
   VStack
 } from '@chakra-ui/react';
-import dayjs from 'dayjs';
-import { IconType } from 'react-icons';
+import dayjs from '../utils/dayjs';
 import { FiAward, FiFlag, FiZap } from 'react-icons/fi';
 import { ActivityEntry, GroupMember, GroupProgress as GroupProgressType } from '../api/types';
+import CardContainer from './ui/CardContainer';
+import IconBadge from './ui/IconBadge';
 
 interface GroupProgressProps {
   data: GroupProgressType;
 }
 
 const GroupProgress = ({ data }: GroupProgressProps) => {
-  const cardBg = useColorModeValue(
-    'linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(254, 243, 199, 0.88))',
-    'gray.800'
-  );
-  const borderColor = useColorModeValue('rgba(251, 191, 36, 0.38)', 'gray.700');
   const progressValue = Math.min(100, Math.round((data.challenge.current / data.challenge.goal) * 100));
 
   return (
-    <Box
-      bg={cardBg}
-      borderRadius="22px"
-      borderWidth="1px"
-      borderColor={borderColor}
-      p={{ base: 5, md: 6 }}
-      boxShadow="0 18px 50px rgba(217, 119, 6, 0.22)"
-      h="100%"
-      overflow="hidden"
-      position="relative"
-    >
+    <CardContainer surface="translucent" h="100%">
       <Stack spacing={6} position="relative" zIndex={1} h="100%">
         <Stack spacing={1}>
           <Text fontSize="lg" fontWeight="semibold" color="brand.800">
@@ -58,7 +43,14 @@ const GroupProgress = ({ data }: GroupProgressProps) => {
           <ActivityFeed entries={data.activity_feed} reactionOptions={data.reaction_options} members={data.leaderboard} />
         </Stack>
       </Stack>
-    </Box>
+      <Box
+        position="absolute"
+        inset={0}
+        opacity={0.18}
+        backgroundImage="radial-gradient(circle at 10% 20%, rgba(249, 115, 22, 0.18), transparent 50%), radial-gradient(circle at 82% 16%, rgba(253, 186, 116, 0.18), transparent 55%)"
+        pointerEvents="none"
+      />
+    </CardContainer>
   );
 };
 
@@ -68,13 +60,7 @@ interface ChallengeCardProps {
 }
 
 const ChallengeCard = ({ progressValue, data }: ChallengeCardProps) => (
-  <Stack
-    spacing={4}
-    bg="rgba(255, 255, 255, 0.75)"
-    borderRadius="20px"
-    p={4}
-    boxShadow="0 12px 36px rgba(217, 119, 6, 0.18)"
-  >
+  <Stack spacing={4} bg="rgba(255, 255, 255, 0.75)" borderRadius="20px" p={4}>
     <HStack spacing={3} align="flex-start">
       <IconBadge icon={FiFlag} />
       <Stack spacing={1} flex="1">
@@ -91,25 +77,6 @@ const ChallengeCard = ({ progressValue, data }: ChallengeCardProps) => (
     </HStack>
     <Progress value={progressValue} size="md" borderRadius="full" colorScheme="orange" bg="rgba(254, 215, 170, 0.6)" />
   </Stack>
-);
-
-interface IconBadgeProps {
-  icon: IconType;
-}
-
-const IconBadge = ({ icon: IconComponent }: IconBadgeProps) => (
-  <Flex
-    align="center"
-    justify="center"
-    w="44px"
-    h="44px"
-    borderRadius="16px"
-    bgGradient="linear(to-br, brand.400, brand.600)"
-    color="white"
-    boxShadow="0 10px 24px rgba(217, 119, 6, 0.3)"
-  >
-    <IconComponent />
-  </Flex>
 );
 
 interface LeaderboardProps {
@@ -136,11 +103,10 @@ const Leaderboard = ({ members, challenge }: LeaderboardProps) => (
           key={member.id}
           align="center"
           justify="space-between"
-          bg="rgba(255, 255, 255, 0.72)"
+          bg="rgba(255, 255, 255, 0.78)"
           borderRadius="16px"
           px={4}
           py={3}
-          boxShadow="0 8px 24px rgba(217, 119, 6, 0.16)"
         >
           <HStack spacing={3}>
             <Badge
@@ -199,57 +165,30 @@ const ActivityFeed = ({ entries, reactionOptions, members }: ActivityFeedProps) 
               key={entry.id}
               spacing={3}
               bg="rgba(255, 255, 255, 0.78)"
-              borderRadius="18px"
+              borderRadius="16px"
               px={4}
               py={3}
-              boxShadow="0 8px 22px rgba(217, 119, 6, 0.16)"
             >
-              <HStack spacing={3}>
-                <Avatar name={member?.name || 'Friend'} bg={member?.avatar_color || 'brand.400'} color="white" size="sm" />
-                <Stack spacing={0} flex="1">
-                  <Text fontSize="sm" fontWeight="semibold" color="brand.800">
-                    {member?.name || 'Friend'}
+              <HStack justify="space-between" align="flex-start">
+                <Stack spacing={1}>
+                  <Text fontWeight="semibold" color="brand.800">
+                    {member?.name ?? 'Anonymous adventurer'}
                   </Text>
                   <Text fontSize="xs" color="brand.600">
-                    {dayjs(entry.timestamp).format('h:mm A')}
+                    {dayjs(entry.timestamp).fromNow()}
+                  </Text>
+                  <Text fontSize="sm" color="brand.900" opacity={0.75}>
+                    {entry.description}
                   </Text>
                 </Stack>
-              </HStack>
-              <Text fontSize="sm" color="brand.900" opacity={0.85}>
-                {entry.summary}
-              </Text>
-              {entry.highlight && (
-                <Badge alignSelf="flex-start" borderRadius="12px" px={3} py={1} bg="rgba(251, 191, 36, 0.2)" color="brand.700">
-                  {entry.highlight}
-                </Badge>
-              )}
-              <ButtonGroup size="sm" variant="ghost">
-                {reactionOptions.map((reaction) => {
-                  const existing = entry.reactions.find((item) => item.id === reaction.id);
-                  return (
-                    <Button
-                      key={reaction.id}
-                      borderRadius="14px"
-                      px={3}
-                      py={1}
-                      fontWeight="medium"
-                      color="brand.700"
-                      bg="rgba(254, 215, 170, 0.32)"
-                      _hover={{ bg: 'rgba(251, 191, 36, 0.35)' }}
-                    >
-                      <HStack spacing={2}>
-                        <Text>{reaction.emoji}</Text>
-                        <Text>{reaction.label}</Text>
-                        {existing && (
-                          <Badge borderRadius="full" bg="rgba(251, 191, 36, 0.35)" color="brand.700" px={2}>
-                            {existing.count}
-                          </Badge>
-                        )}
-                      </HStack>
+                <ButtonGroup size="sm" variant="ghost" colorScheme="orange">
+                  {reactionOptions.map((reaction) => (
+                    <Button key={reaction.id} borderRadius="full">
+                      {reaction.emoji}
                     </Button>
-                  );
-                })}
-              </ButtonGroup>
+                  ))}
+                </ButtonGroup>
+              </HStack>
             </Stack>
           );
         })}

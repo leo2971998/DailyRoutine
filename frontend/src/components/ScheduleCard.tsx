@@ -3,6 +3,7 @@ import dayjs from 'dayjs';
 import advancedFormat from 'dayjs/plugin/advancedFormat';
 import localizedFormat from 'dayjs/plugin/localizedFormat';
 import { ScheduleEvent } from '../api/types';
+import CardContainer from './ui/CardContainer';
 
 dayjs.extend(advancedFormat);
 dayjs.extend(localizedFormat);
@@ -12,50 +13,33 @@ interface ScheduleCardProps {
   layout: 'row' | 'column';
 }
 
-const ScheduleCard = ({ schedule, layout }: ScheduleCardProps) => {
-  const cardBg = useColorModeValue(
-    'linear-gradient(150deg, rgba(255, 255, 255, 0.97), rgba(255, 237, 213, 0.9))',
-    'gray.800'
-  );
-  const border = useColorModeValue('rgba(251, 191, 36, 0.3)', 'gray.700');
-
-  return (
-    <Box
-      bg={cardBg}
-      borderRadius="22px"
-      borderWidth="1px"
-      borderColor={border}
-      p={{ base: 5, md: 6 }}
-      boxShadow="0 12px 40px rgba(217, 119, 6, 0.18)"
-      h="100%"
-      position="relative"
-      overflow="hidden"
-    >
-      <Box
-        position="absolute"
-        inset={0}
-        opacity={0.35}
-        backgroundImage="url('data:image/svg+xml,%3Csvg width=\'480\' height=\'320\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg stroke=\'rgba(255,255,255,0.4)\' stroke-width=\'1\' fill=\'none\'%3E%3Cpath d=\'M20 100c24-36 48-36 72 0s48 36 72 0 48-36 72 0 48 36 72 0\'/%3E%3C/g%3E%3C/svg%3E')"
-      />
-      <Stack spacing={4} h="100%">
-        <Stack spacing={1}>
-          <Text fontSize="lg" fontWeight="semibold" color="brand.800">
-            Upcoming Schedule
-          </Text>
-          <Text fontSize="sm" color="brand.900" opacity={0.7}>
-            Stay ready for the adventures ahead.
-          </Text>
-        </Stack>
-
-        <VStack spacing={4} align="stretch">
-          {schedule.map((event, index) => (
-            <EventCard key={event.id} event={event} layout={layout} index={index} />
-          ))}
-        </VStack>
+const ScheduleCard = ({ schedule, layout }: ScheduleCardProps) => (
+  <CardContainer surface="muted" h="100%">
+    <Stack spacing={4} h="100%" position="relative" zIndex={1}>
+      <Stack spacing={1}>
+        <Text fontSize="lg" fontWeight="semibold" color="brand.800">
+          Upcoming Schedule
+        </Text>
+        <Text fontSize="sm" color="brand.900" opacity={0.7}>
+          Stay ready for the adventures ahead.
+        </Text>
       </Stack>
-    </Box>
-  );
-};
+
+      <VStack spacing={4} align="stretch">
+        {schedule.map((event, index) => (
+          <EventCard key={event.id} event={event} layout={layout} index={index} />
+        ))}
+      </VStack>
+    </Stack>
+    <Box
+      position="absolute"
+      inset={0}
+      opacity={0.16}
+      backgroundImage="radial-gradient(circle at 18% 22%, rgba(249, 115, 22, 0.18), transparent 60%)"
+      pointerEvents="none"
+    />
+  </CardContainer>
+);
 
 interface EventCardProps {
   event: ScheduleEvent;
@@ -64,12 +48,12 @@ interface EventCardProps {
 }
 
 const EventCard = ({ event, layout, index }: EventCardProps) => {
-  const accent = useColorModeValue('rgba(255, 247, 237, 0.75)', 'whiteAlpha.200');
-  const border = useColorModeValue('rgba(251, 191, 36, 0.35)', 'whiteAlpha.300');
+  const accent = useColorModeValue('rgba(255, 255, 255, 0.88)', 'whiteAlpha.200');
+  const border = useColorModeValue('rgba(251, 191, 36, 0.28)', 'whiteAlpha.300');
   const date = dayjs(event.start_time).format('ddd, MMM D • h:mm A');
   const scenicBackground = getScenicBackground(event);
   const duration = dayjs(event.end_time).diff(dayjs(event.start_time), 'hour');
-  const rotation = index % 2 === 0 ? '-1.2deg' : '1deg';
+  const rotation = index % 2 === 0 ? '-1deg' : '1deg';
   const badgeColor = event.color_scheme === 'orange' ? 'brand.500' : 'brand.400';
 
   return (
@@ -79,7 +63,7 @@ const EventCard = ({ event, layout, index }: EventCardProps) => {
       overflow="hidden"
       borderWidth="1px"
       borderColor={border}
-      boxShadow="0 10px 34px rgba(217, 119, 6, 0.18)"
+      boxShadow="0 10px 28px rgba(217, 119, 6, 0.16)"
       transform={`rotate(${rotation})`}
     >
       <Stack direction={layout} spacing={0} align="stretch">
@@ -107,35 +91,15 @@ const EventCard = ({ event, layout, index }: EventCardProps) => {
           >
             {date}
           </Box>
-          <AvatarGroup
-            max={3}
-            size="sm"
-            position="absolute"
-            bottom={4}
-            left={4}
-            spacing="-0.5rem"
-          >
+          <AvatarGroup max={3} size="sm" position="absolute" bottom={4} left={4} spacing="-0.5rem">
             {generateCompanions(event.id).map((companion) => (
-              <Avatar
-                key={companion.name}
-                name={companion.name}
-                bg={companion.color}
-                color="white"
-                borderRadius="14px"
-              />
+              <Avatar key={companion.name} name={companion.name} bg={companion.color} color="white" borderRadius="14px" />
             ))}
           </AvatarGroup>
         </Box>
-        <Stack spacing={3} p={5} justify="space-between" bg="rgba(255, 255, 255, 0.85)">
+        <Stack spacing={3} p={5} justify="space-between" bg="rgba(255, 255, 255, 0.9)">
           <Stack spacing={2}>
-            <Badge
-              alignSelf="flex-start"
-              borderRadius="full"
-              px={3}
-              py={1}
-              bg={`${badgeColor}33`}
-              color={badgeColor}
-            >
+            <Badge alignSelf="flex-start" borderRadius="full" px={3} py={1} bg={`${badgeColor}33`} color={badgeColor}>
               {event.location}
             </Badge>
             <Text fontWeight="semibold" fontSize="lg" color="brand.800">
@@ -164,9 +128,7 @@ const generateCompanions = (seed: string) => {
 };
 
 const getScenicBackground = (event: ScheduleEvent) => {
-  const palette = event.color_scheme === 'orange'
-    ? ['#fb923c', '#fbbf24']
-    : ['#f59e0b', '#f97316'];
+  const palette = event.color_scheme === 'orange' ? ['#fb923c', '#fbbf24'] : ['#f59e0b', '#f97316'];
   const overlay = encodeURIComponent(
     `<svg width="400" height="260" xmlns="http://www.w3.org/2000/svg">
       <defs>
