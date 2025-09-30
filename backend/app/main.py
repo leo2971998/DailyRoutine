@@ -2,9 +2,15 @@
 from __future__ import annotations
 
 import json
+import sys
 from datetime import datetime
+from pathlib import Path
 from threading import RLock
 from typing import Callable
+
+if __package__ is None or __package__ == "":
+    sys.path.append(str(Path(__file__).resolve().parent.parent))
+    __package__ = "app"
 
 from flask import Flask, jsonify, request
 from flask_cors import CORS
@@ -81,6 +87,7 @@ def toggle_task(task_id: str):
     if isinstance(parsed, tuple):
         return parsed
     update = parsed
+
 
     def mutator(current_state: DashboardState) -> None:
         update_task(current_state.checklist, task_id, update.completed)
@@ -166,7 +173,6 @@ def refresh_progress_snapshot() -> None:
 
     def _mutator(state: DashboardState) -> None:
         recompute_progress(state)
-
     state_container.mutate(_mutator)
 
 
