@@ -23,7 +23,7 @@ interface ProgressPanelProps {
 
 const ProgressPanel = ({ progress }: ProgressPanelProps) => {
   const track = useColorModeValue('rgba(253, 224, 71, 0.45)', 'rgba(148, 163, 184, 0.35)');
-  const dividerColor = useColorModeValue('border.subtle', 'whiteAlpha.200');
+  const dividerColor = 'border.subtle';
   const completionRate = computeCompletion(progress);
 
   return (
@@ -38,7 +38,7 @@ const ProgressPanel = ({ progress }: ProgressPanelProps) => {
           </Text>
         </Stack>
 
-        <CircularProgress value={completionRate} size="180px" thickness="12px" color="brand.500" trackColor={track}>
+        <CircularProgress value={completionRate} size="180px" thickness="12px" color="text.accent" trackColor={track}>
           <CircularProgressLabel>
             <Stack spacing={1} align="center">
               <Text fontSize="2xl" fontWeight="semibold" color="text.primary">
@@ -78,9 +78,9 @@ interface StatRowProps {
 }
 
 const StatRow = ({ icon, label, value, delta }: StatRowProps) => {
-  const iconColor = useColorModeValue('brand.500', 'brand.200');
+  const iconColor = 'text.accent';
   const labelColor = useColorModeValue('text.secondary', 'text.muted');
-  const helpColor = useColorModeValue('text.muted', 'text.muted');
+  const helpColor = 'text.muted';
 
   return (
     <Stat>
