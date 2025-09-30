@@ -29,8 +29,8 @@ const categoryColors: Record<string, string> = {
 
 const ChecklistCard = ({ checklist }: ChecklistCardProps) => {
   const queryClient = useQueryClient();
-  const rowBg = useColorModeValue('bg.secondary', 'whiteAlpha.100');
-  const rowBorder = useColorModeValue('border.subtle', 'whiteAlpha.200');
+  const rowBg = 'surface.cardMuted';
+  const rowBorder = 'border.subtle';
 
   const mutation = useMutation({
     mutationFn: ({ id, completed }: { id: string; completed: boolean }) => toggleTask(id, completed),
@@ -106,7 +106,8 @@ const ChecklistCard = ({ checklist }: ChecklistCardProps) => {
                       h="46px"
                       borderRadius="16px"
                       bg={`${categoryColors[category] || 'brand.500'}33`}
-                      border={`1px solid var(--chakra-colors-border-strong)`}
+                    borderWidth="1px"
+                    borderColor="border.accent"
                       flexShrink={0}
                     />
                     <Checkbox

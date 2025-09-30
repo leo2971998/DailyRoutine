@@ -1,8 +1,8 @@
 import { extendTheme, ThemeConfig } from '@chakra-ui/react';
 
 const config: ThemeConfig = {
-  initialColorMode: 'light',
-  useSystemColorMode: true
+  initialColorMode: 'dark',
+  useSystemColorMode: false
 };
 
 const fonts = {
@@ -22,53 +22,48 @@ const colors = {
     700: '#b91c1c',
     800: '#991b1b',
     900: '#7f1d1d'
-  },
-  text: {
-    primary: '#1f2937',
-    secondary: '#374151',
-    muted: '#6b7280',
-    inverse: '#f9fafb',
-    accent: '#dc2626'
-  },
-  bg: {
-    primary: '#ffffff',
-    secondary: '#f9fafb',
-    accent: '#fef7ed',
-    dark: '#1f2937',
-    gradient: 'linear-gradient(135deg, #fef7ed 0%, #fed7aa 100%)'
   }
 };
 
 const semanticTokens = {
   colors: {
-    'text.primary': { default: colors.text.primary, _dark: colors.text.inverse },
-    'text.secondary': { default: colors.text.secondary, _dark: '#e5e7eb' },
-    'text.muted': { default: colors.text.muted, _dark: '#d1d5db' },
-    'text.inverse': { default: colors.text.inverse, _dark: colors.text.primary },
-    'text.accent': { default: colors.text.accent, _dark: '#fca5a5' },
+    'text.primary': { default: '#1f2937', _dark: '#f9fafb' },
+    'text.secondary': { default: '#374151', _dark: '#e5e7eb' },
+    'text.muted': { default: '#6b7280', _dark: '#9ca3af' },
+    'text.inverse': { default: '#f9fafb', _dark: '#1f2937' },
+    'text.accent': { default: '#dc2626', _dark: '#fca5a5' },
     'text.onAccent': { default: '#ffffff', _dark: '#ffffff' },
-    'bg.primary': { default: colors.bg.primary, _dark: '#111827' },
-    'bg.secondary': { default: colors.bg.secondary, _dark: '#1f2937' },
-    'bg.accent': { default: colors.bg.accent, _dark: '#2c1b17' },
+    'bg.primary': { default: '#ffffff', _dark: '#141012' },
+    'bg.secondary': { default: '#f9fafb', _dark: '#1f2937' },
+    'bg.accent': { default: '#fef7ed', _dark: '#2c1b17' },
     'bg.muted': { default: '#f4f5f7', _dark: '#1e293b' },
-    'bg.dark': { default: colors.bg.dark, _dark: '#0f172a' },
+    'bg.dark': { default: '#1f2937', _dark: '#0f172a' },
     'bg.gradient': {
-      default: colors.bg.gradient,
-      _dark: 'linear-gradient(135deg, #111827 0%, #1f2937 100%)'
+      default: 'linear-gradient(135deg, #fef7ed 0%, #fed7aa 100%)',
+      _dark: 'linear-gradient(135deg, #141012 0%, #1f2937 100%)'
+    },
+    'surface.card': {
+      default: 'rgba(255, 255, 255, 0.95)',
+      _dark: 'rgba(31, 41, 55, 0.9)'
     },
     'surface.translucent': {
       default: 'linear-gradient(160deg, rgba(255, 255, 255, 0.96), rgba(254, 247, 235, 0.9))',
-      _dark: 'linear-gradient(160deg, rgba(30, 41, 59, 0.82), rgba(15, 23, 42, 0.9))'
+      _dark: 'linear-gradient(160deg, rgba(30, 41, 59, 0.82), rgba(20, 16, 18, 0.94))'
     },
     'surface.solid': {
       default: 'linear-gradient(150deg, rgba(253, 186, 116, 0.16), rgba(234, 88, 12, 0.12))',
-      _dark: 'linear-gradient(150deg, rgba(30, 41, 59, 0.92), rgba(15, 23, 42, 0.96))'
+      _dark: 'linear-gradient(150deg, rgba(31, 41, 55, 0.9), rgba(20, 16, 18, 0.95))'
     },
     'surface.muted': {
       default: 'linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(254, 247, 237, 0.92))',
-      _dark: 'linear-gradient(180deg, rgba(30, 41, 59, 0.9), rgba(17, 24, 39, 0.95))'
+      _dark: 'linear-gradient(180deg, rgba(55, 65, 81, 0.8), rgba(31, 41, 55, 0.88))'
     },
-    'border.subtle': { default: 'rgba(15, 23, 42, 0.08)', _dark: 'rgba(148, 163, 184, 0.32)' },
+    'surface.cardMuted': {
+      default: 'rgba(254, 247, 237, 0.9)',
+      _dark: 'rgba(55, 65, 81, 0.8)'
+    },
+    'border.subtle': { default: 'rgba(15, 23, 42, 0.08)', _dark: 'rgba(148, 163, 184, 0.2)' },
+    'border.accent': { default: 'rgba(234, 88, 12, 0.28)', _dark: 'rgba(251, 146, 60, 0.4)' },
     'border.strong': { default: 'rgba(234, 88, 12, 0.28)', _dark: 'rgba(248, 113, 113, 0.45)' }
   },
   shadows: {
