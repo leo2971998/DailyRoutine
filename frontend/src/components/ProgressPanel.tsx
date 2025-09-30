@@ -1,5 +1,4 @@
 import {
-  Box,
   CircularProgress,
   CircularProgressLabel,
   Divider,
@@ -13,56 +12,23 @@ import {
   Text,
   useColorModeValue
 } from '@chakra-ui/react';
-import { FiHeart, FiZap } from 'react-icons/fi';
 import { IconType } from 'react-icons';
+import { FiHeart, FiZap } from 'react-icons/fi';
 import { ProgressSnapshot } from '../api/types';
+import CardContainer from './ui/CardContainer';
 
 interface ProgressPanelProps {
   progress: ProgressSnapshot;
 }
 
 const ProgressPanel = ({ progress }: ProgressPanelProps) => {
-  const cardBg = useColorModeValue(
-    'linear-gradient(135deg, rgba(255, 247, 237, 0.98), rgba(253, 224, 71, 0.9))',
-    'gray.800'
-  );
-  const border = useColorModeValue('rgba(251, 191, 36, 0.45)', 'gray.700');
   const track = useColorModeValue('rgba(255, 255, 255, 0.55)', 'gray.700');
   const dividerColor = useColorModeValue('rgba(250, 204, 21, 0.45)', 'whiteAlpha.200');
   const completionRate = computeCompletion(progress);
 
   return (
-    <Box
-      bg={cardBg}
-      borderRadius="22px"
-      borderWidth="1px"
-      borderColor={border}
-      p={{ base: 6, md: 8 }}
-      boxShadow="0 8px 32px rgba(194, 65, 12, 0.18)"
-      h="100%"
-      position="relative"
-      overflow="hidden"
-      transform="rotate(1deg)"
-    >
-      <Box
-        position="absolute"
-        top={-10}
-        right={-12}
-        w="160px"
-        h="160px"
-        bg="rgba(234, 88, 12, 0.2)"
-        borderRadius="full"
-      />
-      <Box
-        position="absolute"
-        bottom={-16}
-        left={-20}
-        w="220px"
-        h="220px"
-        bg="rgba(249, 115, 22, 0.18)"
-        borderRadius="full"
-      />
-      <Stack spacing={6} h="100%" justify="space-between" position="relative">
+    <CardContainer surface="translucent" h="100%">
+      <Stack spacing={6} h="100%" justify="space-between" position="relative" zIndex={1}>
         <Stack spacing={1}>
           <Text fontSize="lg" fontWeight="semibold" color="brand.800">
             Progress Pulse
@@ -72,13 +38,7 @@ const ProgressPanel = ({ progress }: ProgressPanelProps) => {
           </Text>
         </Stack>
 
-        <CircularProgress
-          value={completionRate}
-          size="180px"
-          thickness="12px"
-          color="brand.500"
-          trackColor={track}
-        >
+        <CircularProgress value={completionRate} size="180px" thickness="12px" color="brand.500" trackColor={track}>
           <CircularProgressLabel>
             <Stack spacing={1} align="center">
               <Text fontSize="2xl" fontWeight="semibold" color="brand.800">
@@ -106,7 +66,7 @@ const ProgressPanel = ({ progress }: ProgressPanelProps) => {
           />
         </Stack>
       </Stack>
-    </Box>
+    </CardContainer>
   );
 };
 
@@ -135,9 +95,7 @@ const StatRow = ({ icon, label, value, delta }: StatRowProps) => (
 const computeCompletion = (progress: ProgressSnapshot) => {
   const total = progress.tasks_total + progress.habits_total;
   if (!total) return 0;
-  return Math.round(
-    ((progress.tasks_completed + progress.habits_completed) / total) * 100
-  );
+  return Math.round(((progress.tasks_completed + progress.habits_completed) / total) * 100);
 };
 
 export default ProgressPanel;
