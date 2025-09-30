@@ -32,7 +32,10 @@ const avatarGradients: Record<string, string> = {
 };
 
 const FocusFriends = () => {
-  const cardBg = useColorModeValue('linear-gradient(160deg, #ffedd5, #fde68a)', 'gray.800');
+  const cardBg = useColorModeValue(
+    'linear-gradient(160deg, rgba(255, 255, 255, 0.97), rgba(255, 237, 213, 0.9))',
+    'gray.800'
+  );
   const border = useColorModeValue('rgba(251, 191, 36, 0.3)', 'gray.700');
 
   return (

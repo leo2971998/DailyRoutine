@@ -40,8 +40,8 @@ const colors = {
 const styles = {
   global: {
     body: {
-      bg: '#fff7ed',
-      color: '#473327'
+      bg: '#141012',
+      color: '#f5ebe1'
     }
   }
 };

@@ -35,8 +35,8 @@ function App() {
 
   if (isLoading || !data) {
     return (
-      <Flex minH="100vh" align="center" justify="center" bg="gray.50">
-        <Spinner size="xl" color="brand.500" thickness="4px" />
+      <Flex minH="100vh" align="center" justify="center" bg="#141012">
+        <Spinner size="xl" color="brand.200" thickness="4px" />
       </Flex>
     );
   }
@@ -44,15 +44,23 @@ function App() {
   return (
     <Box
       minH="100vh"
-      bgGradient="linear(to-br, #fff7ed, #ffedd5)"
+      bgGradient="linear(to-br, #141012, #251310)"
+      position="relative"
+      overflow="hidden"
       py={{ base: 6, md: 10 }}
     >
-      <Container maxW="7xl" px={{ base: 4, md: 8 }}>
+      <Box
+        position="absolute"
+        inset={0}
+        opacity={0.3}
+        backgroundImage="radial-gradient(circle at 15% 20%, rgba(249, 115, 22, 0.35), transparent 55%), radial-gradient(circle at 85% 10%, rgba(250, 204, 21, 0.25), transparent 50%), radial-gradient(circle at 30% 85%, rgba(234, 88, 12, 0.28), transparent 60%)"
+      />
+      <Container maxW="7xl" px={{ base: 4, md: 8 }} position="relative" zIndex={1}>
         <Stack spacing={{ base: 6, lg: 10 }}>
           <Flex
-            bg="white"
+            bgGradient="linear(to-br, rgba(255, 247, 237, 0.96), rgba(254, 215, 170, 0.92))"
             borderRadius="24px"
-            boxShadow="0 12px 40px rgba(124, 45, 18, 0.12)"
+            boxShadow="0 24px 60px rgba(0, 0, 0, 0.35)"
             px={{ base: 4, md: 6 }}
             py={4}
             align="center"
@@ -76,10 +84,10 @@ function App() {
                 DR
               </Box>
               <Stack spacing={0}>
-                <Text fontWeight="semibold" color="warmGray.700">
+                <Text fontWeight="semibold" color="brand.800">
                   DailyRoutine Adventures
                 </Text>
-                <Text fontSize="xs" color="warmGray.400">
+                <Text fontSize="xs" color="brand.700" opacity={0.7}>
                   Plan your warmest journeys
                 </Text>
               </Stack>
@@ -93,8 +101,8 @@ function App() {
                   px={3}
                   py={2}
                   borderRadius="16px"
-                  bg="brand.50"
-                  color="brand.600"
+                  bg="rgba(251, 191, 36, 0.18)"
+                  color="brand.700"
                 >
                   <Icon as={item.icon} />
                   <Text fontSize="sm" fontWeight="medium">
@@ -107,11 +115,11 @@ function App() {
             <HStack spacing={4}>
               <InputGroup maxW="260px">
                 <InputLeftElement pointerEvents="none">
-                  <Icon as={FiSearch} color="warmGray.400" />
+                  <Icon as={FiSearch} color="brand.500" />
                 </InputLeftElement>
                 <Input
                   placeholder="Search journeys"
-                  bg="warmGray.50"
+                  bg="rgba(255, 255, 255, 0.9)"
                   borderRadius="16px"
                   borderColor="transparent"
                   _focus={{ borderColor: 'brand.300', boxShadow: '0 0 0 1px var(--chakra-colors-brand-300)' }}

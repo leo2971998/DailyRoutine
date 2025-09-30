@@ -22,7 +22,10 @@ interface ProgressPanelProps {
 }
 
 const ProgressPanel = ({ progress }: ProgressPanelProps) => {
-  const cardBg = useColorModeValue('linear-gradient(135deg, #fff7ed, #fde68a)', 'gray.800');
+  const cardBg = useColorModeValue(
+    'linear-gradient(135deg, rgba(255, 247, 237, 0.98), rgba(253, 224, 71, 0.9))',
+    'gray.800'
+  );
   const border = useColorModeValue('rgba(251, 191, 36, 0.45)', 'gray.700');
   const track = useColorModeValue('rgba(255, 255, 255, 0.55)', 'gray.700');
   const dividerColor = useColorModeValue('rgba(250, 204, 21, 0.45)', 'whiteAlpha.200');
