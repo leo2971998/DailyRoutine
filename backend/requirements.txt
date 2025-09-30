@@ -1,0 +1,5 @@
+fastapi==0.103.1
+uvicorn[standard]==0.23.2
+pydantic==1.10.12
+python-multipart==0.0.6
+orjson==3.9.10

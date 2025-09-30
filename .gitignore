@@ -1,0 +1,11 @@
+# Node
+frontend/node_modules
+frontend/dist
+
+# Python
+__pycache__
+*.pyc
+
+# Environment
+.env
+.DS_Store

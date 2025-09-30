@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="240" viewBox="0 0 400 240">
+  <defs>
+    <linearGradient id="soccer" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#84fab0" />
+      <stop offset="100%" stop-color="#8fd3f4" />
+    </linearGradient>
+  </defs>
+  <rect width="400" height="240" rx="24" fill="url(#soccer)" />
+  <circle cx="200" cy="120" r="60" fill="#ffffff" opacity="0.8" />
+  <polygon points="200,60 225,115 280,115 235,150 255,205 200,170 145,205 165,150 120,115 175,115" fill="#2b6cb0" opacity="0.6" />
+</svg>
