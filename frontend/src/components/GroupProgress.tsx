@@ -11,7 +11,7 @@ import {
   Text,
   VStack
 } from '@chakra-ui/react';
-import dayjs from 'dayjs';
+import dayjs from '../utils/dayjs';
 import { FiAward, FiFlag, FiZap } from 'react-icons/fi';
 import { ActivityEntry, GroupMember, GroupProgress as GroupProgressType } from '../api/types';
 import CardContainer from './ui/CardContainer';

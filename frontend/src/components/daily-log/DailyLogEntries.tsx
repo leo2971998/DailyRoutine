@@ -9,7 +9,7 @@ import {
   Text,
   VStack
 } from '@chakra-ui/react';
-import dayjs from 'dayjs';
+import dayjs from '../../utils/dayjs';
 import { FiCheckCircle, FiFeather } from 'react-icons/fi';
 import { DailyLogEntry } from '../../api/types';
 
