@@ -30,7 +30,7 @@ const semanticTokens = {
     'text.primary': { default: '#1f2937', _dark: '#f9fafb' },
     'text.secondary': { default: '#374151', _dark: '#e5e7eb' },
     'text.muted': { default: '#6b7280', _dark: '#9ca3af' },
-    'text.inverse': { default: '#f9fafb', _dark: '#1f2937' },
+    'text.inverse': { default: '#111827', _dark: '#f8fafc' },
     'text.accent': { default: '#dc2626', _dark: '#fca5a5' },
     'text.onAccent': { default: '#ffffff', _dark: '#ffffff' },
     'bg.primary': { default: '#ffffff', _dark: '#141012' },

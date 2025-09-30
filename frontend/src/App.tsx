@@ -49,7 +49,7 @@ function App() {
   const inputBorder = useColorModeValue('rgba(15, 23, 42, 0.06)', 'rgba(255, 255, 255, 0.12)');
   const searchIconColor = useColorModeValue('brand.500', 'brand.300');
   const tabListBackground = useColorModeValue('rgba(255, 255, 255, 0.88)', 'whiteAlpha.100');
-  const tabColor = useColorModeValue('text.muted', 'text.inverse');
+  const tabColor = useColorModeValue('text.muted', 'whiteAlpha.800');
   const selectedTabStyles = useColorModeValue(
     {
       bg: 'brand.500',
