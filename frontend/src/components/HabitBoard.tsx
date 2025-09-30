@@ -20,8 +20,11 @@ interface HabitBoardProps {
 
 const HabitBoard = ({ habits }: HabitBoardProps) => {
   const queryClient = useQueryClient();
-  const cardBg = useColorModeValue('white', 'gray.800');
-  const border = useColorModeValue('gray.100', 'gray.700');
+  const cardBg = useColorModeValue(
+    'linear-gradient(135deg, rgba(255, 255, 255, 0.97), rgba(255, 237, 213, 0.92))',
+    'gray.800'
+  );
+  const border = useColorModeValue('rgba(251, 191, 36, 0.3)', 'gray.700');
 
   const mutation = useMutation({
     mutationFn: ({ id, completed_today }: { id: string; completed_today: number }) =>
@@ -53,19 +56,39 @@ const HabitBoard = ({ habits }: HabitBoardProps) => {
   return (
     <Box
       bg={cardBg}
-      borderRadius="28px"
+      borderRadius="22px"
       borderWidth="1px"
       borderColor={border}
       p={{ base: 5, md: 8 }}
-      boxShadow="xl"
+      boxShadow="0 12px 40px rgba(217, 119, 6, 0.16)"
       h="100%"
+      position="relative"
+      overflow="hidden"
     >
+      <Box
+        position="absolute"
+        top={-20}
+        right={-30}
+        w="200px"
+        h="200px"
+        borderRadius="full"
+        bg="rgba(249, 115, 22, 0.18)"
+      />
+      <Box
+        position="absolute"
+        bottom={-40}
+        left={-20}
+        w="240px"
+        h="240px"
+        borderRadius="full"
+        bg="rgba(250, 204, 21, 0.22)"
+      />
       <Stack spacing={6} h="100%">
         <Stack spacing={1}>
-          <Text fontSize="lg" fontWeight="semibold" color="gray.700">
+          <Text fontSize="lg" fontWeight="semibold" color="brand.800">
             Habit Momentum
           </Text>
-          <Text fontSize="sm" color="gray.500">
+          <Text fontSize="sm" color="brand.900" opacity={0.7}>
             Track streaks and keep the energy flowing.
           </Text>
         </Stack>
@@ -86,8 +109,8 @@ interface HabitCardProps {
 }
 
 const HabitCard = ({ habit, onUpdate }: HabitCardProps) => {
-  const accent = useColorModeValue('gray.50', 'whiteAlpha.200');
-  const border = useColorModeValue('gray.100', 'whiteAlpha.300');
+  const accent = useColorModeValue('rgba(255, 255, 255, 0.82)', 'whiteAlpha.200');
+  const border = useColorModeValue('rgba(251, 191, 36, 0.35)', 'whiteAlpha.300');
   const percent = Math.min((habit.completed_today / habit.goal_per_day) * 100, 100);
 
   const chartData = habit.weekly_progress.map((value, index) => ({
@@ -99,26 +122,49 @@ const HabitCard = ({ habit, onUpdate }: HabitCardProps) => {
     <Stack
       spacing={4}
       p={5}
-      borderRadius="24px"
+      borderRadius="20px"
       bg={accent}
       borderWidth="1px"
       borderColor={border}
+      boxShadow="0 10px 28px rgba(217, 119, 6, 0.14)"
+      position="relative"
+      overflow="hidden"
     >
+      <Box
+        position="absolute"
+        top={-20}
+        left={-30}
+        w="140px"
+        h="140px"
+        borderRadius="full"
+        bg="rgba(251, 146, 60, 0.18)"
+      />
+      <Box
+        position="absolute"
+        bottom={-24}
+        right={-24}
+        w="160px"
+        h="160px"
+        borderRadius="full"
+        bg="rgba(250, 204, 21, 0.18)"
+      />
       <Stack spacing={1}>
-        <Text fontWeight="semibold">{habit.title}</Text>
-        <Text fontSize="sm" color="gray.500">
+        <Text fontWeight="semibold" color="brand.800">
+          {habit.title}
+        </Text>
+        <Text fontSize="sm" color="brand.900" opacity={0.65}>
           {habit.completed_today}/{habit.goal_per_day} today • streak {habit.streak}
         </Text>
       </Stack>
-      <Progress value={percent} borderRadius="full" colorScheme="purple" />
+      <Progress value={percent} borderRadius="full" colorScheme="orange" bg="rgba(251, 191, 36, 0.2)" />
       <Box h="120px">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={chartData}>
             <Tooltip
-              cursor={{ fill: 'rgba(99, 102, 241, 0.12)' }}
+              cursor={{ fill: 'rgba(249, 115, 22, 0.12)' }}
               contentStyle={{
-                background: 'rgba(23, 25, 35, 0.85)',
-                borderRadius: '12px',
+                background: 'rgba(71, 51, 39, 0.92)',
+                borderRadius: '14px',
                 color: 'white',
                 border: 'none'
               }}
@@ -128,8 +174,8 @@ const HabitCard = ({ habit, onUpdate }: HabitCardProps) => {
             <Bar dataKey="value" radius={[12, 12, 12, 12]} fill="url(#barGradient)" />
             <defs>
               <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#7c3aed" stopOpacity={0.9} />
-                <stop offset="100%" stopColor="#a855f7" stopOpacity={0.7} />
+                <stop offset="0%" stopColor="#fb923c" stopOpacity={0.9} />
+                <stop offset="100%" stopColor="#f59e0b" stopOpacity={0.7} />
               </linearGradient>
             </defs>
           </BarChart>
@@ -147,7 +193,7 @@ const HabitCard = ({ habit, onUpdate }: HabitCardProps) => {
         </Button>
         <Button
           size="sm"
-          colorScheme="purple"
+          colorScheme="orange"
           borderRadius="full"
           onClick={() => onUpdate({ id: habit.id, completed_today: habit.completed_today + 1 })}
         >

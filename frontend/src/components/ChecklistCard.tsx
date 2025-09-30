@@ -20,17 +20,29 @@ interface ChecklistCardProps {
 }
 
 const categoryColors: Record<string, string> = {
-  wellness: 'green',
-  focus: 'purple',
-  collaboration: 'orange',
-  personal: 'blue'
+  wellness: 'brand.400',
+  focus: 'brand.500',
+  collaboration: 'brand.600',
+  personal: 'brand.300'
+};
+
+const categoryIllustrations: Record<string, string> = {
+  wellness:
+    'linear-gradient(135deg, rgba(253, 224, 71, 0.9), rgba(249, 115, 22, 0.85))',
+  focus: 'linear-gradient(135deg, rgba(251, 146, 60, 0.9), rgba(234, 88, 12, 0.85))',
+  collaboration:
+    'linear-gradient(135deg, rgba(250, 204, 21, 0.9), rgba(253, 186, 116, 0.85))',
+  personal: 'linear-gradient(135deg, rgba(255, 237, 213, 0.95), rgba(251, 191, 36, 0.85))'
 };
 
 const ChecklistCard = ({ checklist }: ChecklistCardProps) => {
   const queryClient = useQueryClient();
-  const cardBg = useColorModeValue('white', 'gray.800');
-  const border = useColorModeValue('gray.100', 'gray.700');
-  const rowBg = useColorModeValue('gray.50', 'whiteAlpha.200');
+  const cardBg = useColorModeValue(
+    'linear-gradient(150deg, rgba(255, 255, 255, 0.97), rgba(255, 237, 213, 0.92))',
+    'gray.800'
+  );
+  const border = useColorModeValue('rgba(251, 191, 36, 0.35)', 'gray.700');
+  const rowBg = useColorModeValue('rgba(255, 255, 255, 0.86)', 'whiteAlpha.200');
 
   const mutation = useMutation({
     mutationFn: ({ id, completed }: { id: string; completed: boolean }) =>
@@ -69,32 +81,40 @@ const ChecklistCard = ({ checklist }: ChecklistCardProps) => {
   return (
     <Box
       bg={cardBg}
-      borderRadius="28px"
+      borderRadius="22px"
       borderWidth="1px"
       borderColor={border}
       p={{ base: 5, md: 8 }}
-      boxShadow="xl"
+      boxShadow="0 12px 40px rgba(217, 119, 6, 0.16)"
+      position="relative"
+      overflow="hidden"
     >
+      <Box
+        position="absolute"
+        inset={0}
+        opacity={0.3}
+        backgroundImage="url('data:image/svg+xml,%3Csvg width=\'480\' height=\'320\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg stroke=\'rgba(255,255,255,0.45)\' stroke-width=\'0.8\' fill=\'none\'%3E%3Cpath d=\'M30 100c28-40 56-40 84 0s56 40 84 0 56-40 84 0 56 40 84 0\'/%3E%3C/g%3E%3C/svg%3E')"
+      />
       <Stack spacing={6}>
         <Stack spacing={1}>
-          <Text fontSize="lg" fontWeight="semibold" color="gray.700">
+          <Text fontSize="lg" fontWeight="semibold" color="brand.800">
             Daily Routine Checklist
           </Text>
-          <Text fontSize="sm" color="gray.500">
+          <Text fontSize="sm" color="brand.900" opacity={0.7}>
             Swipe through your focus, wellness and collaboration goals.
           </Text>
         </Stack>
 
         <VStack align="stretch" spacing={5}>
           {Object.entries(grouped).map(([category, tasks]) => (
-            <Stack key={category} spacing={4}>
+            <Stack key={category} spacing={4} position="relative">
               <Badge
-                colorScheme={categoryColors[category] || 'purple'}
-                variant="subtle"
+                bg={`${categoryColors[category] || 'brand.500'}33`}
+                color={categoryColors[category] || 'brand.500'}
                 alignSelf="flex-start"
                 borderRadius="full"
-                px={3}
-                py={1}
+                px={4}
+                py={1.5}
               >
                 {category.charAt(0).toUpperCase() + category.slice(1)}
               </Badge>
@@ -104,21 +124,31 @@ const ChecklistCard = ({ checklist }: ChecklistCardProps) => {
                     key={task.id}
                     spacing={4}
                     p={4}
-                    borderRadius="20px"
+                    borderRadius="18px"
                     bg={rowBg}
+                    boxShadow="0 8px 24px rgba(217, 119, 6, 0.12)"
                   >
+                    <Box
+                      w="46px"
+                      h="46px"
+                      borderRadius="16px"
+                      bg={categoryIllustrations[category] || categoryIllustrations.focus}
+                      flexShrink={0}
+                    />
                     <Checkbox
                       isChecked={task.completed}
                       onChange={(event) =>
                         mutation.mutate({ id: task.id, completed: event.target.checked })
                       }
-                      colorScheme="brand"
+                      colorScheme="orange"
                       size="lg"
                     >
                       <Stack spacing={1}>
-                        <Text fontWeight="semibold">{task.title}</Text>
+                        <Text fontWeight="semibold" color="brand.800">
+                          {task.title}
+                        </Text>
                         {task.scheduled_for && (
-                          <HStack fontSize="sm" color="gray.500">
+                          <HStack fontSize="sm" color="brand.900" opacity={0.65}>
                             <Icon as={FiClock} />
                             <Text>{task.scheduled_for}</Text>
                           </HStack>
