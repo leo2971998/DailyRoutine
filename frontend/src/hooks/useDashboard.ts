@@ -18,6 +18,14 @@ type ServerToClientEvents = {
   dashboard_event: (payload: DashboardEventPayload) => void;
 };
 
+const isTaskUpdate = (
+  payload: DashboardEventPayload
+): payload is Extract<DashboardEventPayload, { type: 'task_updated' }> => payload.type === 'task_updated';
+
+const isHabitUpdate = (
+  payload: DashboardEventPayload
+): payload is Extract<DashboardEventPayload, { type: 'habit_updated' }> => payload.type === 'habit_updated';
+
 const getSocketUrl = () => {
   if (typeof window === 'undefined') return '';
   return (
@@ -42,15 +50,15 @@ export const useDashboard = () => {
       return;
     }
 
-    const socket: Socket<ServerToClientEvents> = io<ServerToClientEvents>(socketUrl, {
+    const socket = io(socketUrl, {
       transports: ['websocket'],
       query: { userId: 'wendy' }
-    });
+    }) as Socket<ServerToClientEvents>;
 
     const onDashboardEvent = (payload: DashboardEventPayload) => {
       queryClient.setQueryData<DashboardState | undefined>(DASHBOARD_QUERY_KEY, (prev) => {
         if (!prev) return prev;
-        if (payload.type === 'task_updated') {
+        if (isTaskUpdate(payload)) {
           return {
             ...prev,
             progress: payload.payload.progress,
@@ -61,7 +69,7 @@ export const useDashboard = () => {
             )
           };
         }
-        if (payload.type === 'habit_updated') {
+        if (isHabitUpdate(payload)) {
           return {
             ...prev,
             progress: payload.payload.progress,

@@ -29,7 +29,8 @@ const categoryColors: Record<string, string> = {
 
 const ChecklistCard = ({ checklist }: ChecklistCardProps) => {
   const queryClient = useQueryClient();
-  const rowBg = useColorModeValue('rgba(255, 255, 255, 0.9)', 'whiteAlpha.200');
+  const rowBg = useColorModeValue('bg.secondary', 'whiteAlpha.100');
+  const rowBorder = useColorModeValue('border.subtle', 'whiteAlpha.200');
 
   const mutation = useMutation({
     mutationFn: ({ id, completed }: { id: string; completed: boolean }) => toggleTask(id, completed),
@@ -68,10 +69,10 @@ const ChecklistCard = ({ checklist }: ChecklistCardProps) => {
     <CardContainer surface="muted">
       <Stack spacing={6} position="relative" zIndex={1}>
         <Stack spacing={1}>
-          <Text fontSize="lg" fontWeight="semibold" color="brand.800">
+          <Text fontSize="lg" fontWeight="semibold" color="text.primary">
             Daily Routine Checklist
           </Text>
-          <Text fontSize="sm" color="brand.900" opacity={0.7}>
+          <Text fontSize="sm" color="text.secondary">
             Swipe through your focus, wellness and collaboration goals.
           </Text>
         </Stack>
@@ -97,13 +98,15 @@ const ChecklistCard = ({ checklist }: ChecklistCardProps) => {
                     p={4}
                     borderRadius="18px"
                     bg={rowBg}
+                    borderWidth="1px"
+                    borderColor={rowBorder}
                   >
                     <Box
                       w="46px"
                       h="46px"
                       borderRadius="16px"
                       bg={`${categoryColors[category] || 'brand.500'}33`}
-                      border="1px solid rgba(251, 191, 36, 0.25)"
+                      border={`1px solid var(--chakra-colors-border-strong)`}
                       flexShrink={0}
                     />
                     <Checkbox
@@ -115,11 +118,11 @@ const ChecklistCard = ({ checklist }: ChecklistCardProps) => {
                       size="lg"
                     >
                       <Stack spacing={1}>
-                        <Text fontWeight="semibold" color="brand.800">
+                        <Text fontWeight="semibold" color="text.primary">
                           {task.title}
                         </Text>
                         {task.scheduled_for && (
-                          <HStack fontSize="sm" color="brand.900" opacity={0.65}>
+                          <HStack fontSize="sm" color="text.muted">
                             <Icon as={FiClock} />
                             <Text>{task.scheduled_for}</Text>
                           </HStack>

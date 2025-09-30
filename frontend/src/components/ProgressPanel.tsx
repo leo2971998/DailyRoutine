@@ -22,18 +22,18 @@ interface ProgressPanelProps {
 }
 
 const ProgressPanel = ({ progress }: ProgressPanelProps) => {
-  const track = useColorModeValue('rgba(255, 255, 255, 0.55)', 'gray.700');
-  const dividerColor = useColorModeValue('rgba(250, 204, 21, 0.45)', 'whiteAlpha.200');
+  const track = useColorModeValue('rgba(253, 224, 71, 0.45)', 'rgba(148, 163, 184, 0.35)');
+  const dividerColor = useColorModeValue('border.subtle', 'whiteAlpha.200');
   const completionRate = computeCompletion(progress);
 
   return (
     <CardContainer surface="translucent" h="100%">
       <Stack spacing={6} h="100%" justify="space-between" position="relative" zIndex={1}>
         <Stack spacing={1}>
-          <Text fontSize="lg" fontWeight="semibold" color="brand.800">
+          <Text fontSize="lg" fontWeight="semibold" color="text.primary">
             Progress Pulse
           </Text>
-          <Text fontSize="sm" color="brand.900" opacity={0.7}>
+          <Text fontSize="sm" color="text.secondary">
             Snapshot of your completion energy today.
           </Text>
         </Stack>
@@ -41,10 +41,10 @@ const ProgressPanel = ({ progress }: ProgressPanelProps) => {
         <CircularProgress value={completionRate} size="180px" thickness="12px" color="brand.500" trackColor={track}>
           <CircularProgressLabel>
             <Stack spacing={1} align="center">
-              <Text fontSize="2xl" fontWeight="semibold" color="brand.800">
+              <Text fontSize="2xl" fontWeight="semibold" color="text.primary">
                 {completionRate}%
               </Text>
-              <Text fontSize="sm" color="brand.900" opacity={0.7}>
+              <Text fontSize="sm" color="text.secondary">
                 Completion
               </Text>
             </Stack>
@@ -77,20 +77,28 @@ interface StatRowProps {
   delta: string;
 }
 
-const StatRow = ({ icon, label, value, delta }: StatRowProps) => (
-  <Stat>
-    <HStack spacing={4} align="flex-start">
-      <Icon as={icon} boxSize={8} color="brand.500" />
-      <Stack spacing={0}>
-        <StatLabel fontSize="sm" color="brand.900" opacity={0.7}>
-          {label}
-        </StatLabel>
-        <StatNumber fontSize="2xl">{value}</StatNumber>
-        <StatHelpText color="brand.600">{delta}</StatHelpText>
-      </Stack>
-    </HStack>
-  </Stat>
-);
+const StatRow = ({ icon, label, value, delta }: StatRowProps) => {
+  const iconColor = useColorModeValue('brand.500', 'brand.200');
+  const labelColor = useColorModeValue('text.secondary', 'text.muted');
+  const helpColor = useColorModeValue('text.muted', 'text.muted');
+
+  return (
+    <Stat>
+      <HStack spacing={4} align="flex-start">
+        <Icon as={icon} boxSize={8} color={iconColor} />
+        <Stack spacing={0}>
+          <StatLabel fontSize="sm" color={labelColor}>
+            {label}
+          </StatLabel>
+          <StatNumber fontSize="2xl" color="text.primary">
+            {value}
+          </StatNumber>
+          <StatHelpText color={helpColor}>{delta}</StatHelpText>
+        </Stack>
+      </HStack>
+    </Stat>
+  );
+};
 
 const computeCompletion = (progress: ProgressSnapshot) => {
   const total = progress.tasks_total + progress.habits_total;

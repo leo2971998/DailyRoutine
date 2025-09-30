@@ -22,7 +22,9 @@ const DailyLogCard = ({ log, checklist }: DailyLogCardProps) => {
   const [selectedMood, setSelectedMood] = useState<string | null>('radiant');
   const [entries, setEntries] = useState<DailyLogEntry[]>(log.entries);
   const [expandedEntry, setExpandedEntry] = useState<string | null>(log.entries[0]?.id ?? null);
-  const accentText = useColorModeValue('brand.800', 'orange.100');
+  const accentText = useColorModeValue('brand.600', 'brand.200');
+  const badgeBackground = useColorModeValue('bg.accent', 'whiteAlpha.100');
+  const badgeBorder = useColorModeValue('border.subtle', 'whiteAlpha.200');
 
   const moodMeta = useMemo(
     () => moodPalette.find((mood) => mood.id === selectedMood) ?? null,
@@ -72,7 +74,9 @@ const DailyLogCard = ({ log, checklist }: DailyLogCardProps) => {
               borderRadius="full"
               px={4}
               py={1.5}
-              bg="rgba(249, 115, 22, 0.16)"
+              bg={badgeBackground}
+              borderWidth="1px"
+              borderColor={badgeBorder}
               color={accentText}
               fontWeight="semibold"
             >
@@ -85,7 +89,7 @@ const DailyLogCard = ({ log, checklist }: DailyLogCardProps) => {
               {entries.length} moments today
             </Badge>
           </HStack>
-          <Text color="brand.900" opacity={0.75} maxW="3xl">
+          <Text color="text.secondary" maxW="3xl">
             {log.focus}
           </Text>
         </Stack>
