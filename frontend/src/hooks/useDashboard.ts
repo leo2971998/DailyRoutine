@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { io, Socket } from 'socket.io-client';
-import { fetchDashboard } from '../api/dashboard';
+import { fetchDashboard, isUsingMockDashboard } from '../api/dashboard';
 import { DashboardState } from '../api/types';
 
 export const DASHBOARD_QUERY_KEY = ['dashboard'];
@@ -33,7 +33,7 @@ export const useDashboard = () => {
   const query = useQuery({ queryKey: DASHBOARD_QUERY_KEY, queryFn: fetchDashboard });
 
   useEffect(() => {
-    if (!query.data) {
+    if (!query.data || isUsingMockDashboard) {
       return;
     }
 

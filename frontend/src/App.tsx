@@ -22,6 +22,7 @@ import ScheduleCard from './components/ScheduleCard';
 import HabitBoard from './components/HabitBoard';
 import ProgressPanel from './components/ProgressPanel';
 import GroupProgress from './components/GroupProgress';
+import DailyLogCard from './components/DailyLogCard';
 
 const navItems = [
   { label: 'Overview', icon: FiGrid },
@@ -169,7 +170,10 @@ function App() {
                   <ChecklistCard checklist={data.checklist} />
                 </GridItem>
                 <GridItem colSpan={{ base: 1, lg: 2 }}>
-                  <ScheduleCard schedule={data.schedule} layout={layout ?? 'column'} />
+                  <Stack spacing={{ base: 6, md: 8 }}>
+                    <ScheduleCard schedule={data.schedule} layout={layout ?? 'column'} />
+                    <DailyLogCard log={data.daily_log} checklist={data.checklist} />
+                  </Stack>
                 </GridItem>
               </Grid>
 
