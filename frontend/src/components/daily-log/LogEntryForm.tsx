@@ -5,7 +5,8 @@ import {
   Stack,
   Text,
   Textarea,
-  useBreakpointValue
+  useBreakpointValue,
+  useColorModeValue
 } from '@chakra-ui/react';
 import { ChangeEvent, FormEvent } from 'react';
 import { FiPlus } from 'react-icons/fi';
@@ -34,12 +35,15 @@ const LogEntryForm = ({
   onSelectMood
 }: LogEntryFormProps) => {
   const orientation = useBreakpointValue<'column' | 'row'>({ base: 'column', md: 'row' });
+  const inputBg = useColorModeValue('bg.primary', 'whiteAlpha.100');
+  const inputBorder = useColorModeValue('border.subtle', 'whiteAlpha.200');
+  const labelColor = useColorModeValue('text.secondary', 'text.muted');
 
   const handleChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
     onEntryChange(event.target.value);
   };
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (event: FormEvent<HTMLDivElement>) => {
     event.preventDefault();
     onSubmit();
   };
@@ -57,8 +61,8 @@ const LogEntryForm = ({
         onChange={handleChange}
         placeholder="Capture a warm moment or feeling..."
         borderRadius="18px"
-        bg="rgba(255, 255, 255, 0.9)"
-        borderColor="rgba(251, 191, 36, 0.28)"
+        bg={inputBg}
+        borderColor={inputBorder}
         _focus={{
           borderColor: 'brand.400',
           boxShadow: '0 0 0 1px var(--chakra-colors-brand-400)'
@@ -67,7 +71,7 @@ const LogEntryForm = ({
       />
       <Stack spacing={3} w={{ base: '100%', md: '40%' }}>
         <Box>
-          <Text fontSize="sm" color="brand.700" mb={2} fontWeight="medium">
+          <Text fontSize="sm" color={labelColor} mb={2} fontWeight="medium">
             Mood for this moment
           </Text>
           <ButtonGroup size="sm" isAttached colorScheme="orange">

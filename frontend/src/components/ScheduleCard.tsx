@@ -17,10 +17,10 @@ const ScheduleCard = ({ schedule, layout }: ScheduleCardProps) => (
   <CardContainer surface="muted" h="100%">
     <Stack spacing={4} h="100%" position="relative" zIndex={1}>
       <Stack spacing={1}>
-        <Text fontSize="lg" fontWeight="semibold" color="brand.800">
+        <Text fontSize="lg" fontWeight="semibold" color="text.primary">
           Upcoming Schedule
         </Text>
-        <Text fontSize="sm" color="brand.900" opacity={0.7}>
+        <Text fontSize="sm" color="text.secondary">
           Stay ready for the adventures ahead.
         </Text>
       </Stack>
@@ -48,13 +48,15 @@ interface EventCardProps {
 }
 
 const EventCard = ({ event, layout, index }: EventCardProps) => {
-  const accent = useColorModeValue('rgba(255, 255, 255, 0.88)', 'whiteAlpha.200');
-  const border = useColorModeValue('rgba(251, 191, 36, 0.28)', 'whiteAlpha.300');
+  const accent = useColorModeValue('bg.secondary', 'whiteAlpha.100');
+  const border = useColorModeValue('border.subtle', 'whiteAlpha.200');
   const date = dayjs(event.start_time).format('ddd, MMM D • h:mm A');
   const scenicBackground = getScenicBackground(event);
   const duration = dayjs(event.end_time).diff(dayjs(event.start_time), 'hour');
   const rotation = index % 2 === 0 ? '-1deg' : '1deg';
   const badgeColor = event.color_scheme === 'orange' ? 'brand.500' : 'brand.400';
+  const dateColor = useColorModeValue('text.primary', 'text.inverse');
+  const eventBodyBg = useColorModeValue('bg.primary', 'whiteAlpha.100');
 
   return (
     <Box
@@ -83,7 +85,7 @@ const EventCard = ({ event, layout, index }: EventCardProps) => {
             borderRadius="18px"
             px={3}
             py={1}
-            color="brand.700"
+            color={dateColor}
             fontWeight="semibold"
             fontSize="xs"
             textTransform="uppercase"
@@ -97,19 +99,19 @@ const EventCard = ({ event, layout, index }: EventCardProps) => {
             ))}
           </AvatarGroup>
         </Box>
-        <Stack spacing={3} p={5} justify="space-between" bg="rgba(255, 255, 255, 0.9)">
+        <Stack spacing={3} p={5} justify="space-between" bg={eventBodyBg}>
           <Stack spacing={2}>
             <Badge alignSelf="flex-start" borderRadius="full" px={3} py={1} bg={`${badgeColor}33`} color={badgeColor}>
               {event.location}
             </Badge>
-            <Text fontWeight="semibold" fontSize="lg" color="brand.800">
+            <Text fontWeight="semibold" fontSize="lg" color="text.primary">
               {event.title}
             </Text>
-            <Text fontSize="sm" color="brand.900" opacity={0.65}>
+            <Text fontSize="sm" color="text.secondary">
               Adventure mood: {event.color_scheme === 'orange' ? 'sunny escape' : 'creative retreat'}
             </Text>
           </Stack>
-          <Text fontSize="xs" textTransform="uppercase" color="brand.600" letterSpacing="0.3em">
+          <Text fontSize="xs" textTransform="uppercase" color="text.muted" letterSpacing="0.3em">
             {duration}h journey
           </Text>
         </Stack>

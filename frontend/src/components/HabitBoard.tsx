@@ -53,10 +53,10 @@ const HabitBoard = ({ habits }: HabitBoardProps) => {
     <CardContainer surface="muted">
       <Stack spacing={6} h="100%" position="relative" zIndex={1}>
         <Stack spacing={1}>
-          <Text fontSize="lg" fontWeight="semibold" color="brand.800">
+          <Text fontSize="lg" fontWeight="semibold" color="text.primary">
             Habit Momentum
           </Text>
-          <Text fontSize="sm" color="brand.900" opacity={0.7}>
+          <Text fontSize="sm" color="text.secondary">
             Track streaks and keep the energy flowing.
           </Text>
         </Stack>
@@ -84,9 +84,23 @@ interface HabitCardProps {
 }
 
 const HabitCard = ({ habit, onUpdate }: HabitCardProps) => {
-  const accent = useColorModeValue('rgba(255, 255, 255, 0.9)', 'whiteAlpha.200');
-  const border = useColorModeValue('rgba(251, 191, 36, 0.28)', 'whiteAlpha.300');
+  const accent = useColorModeValue('bg.secondary', 'whiteAlpha.100');
+  const border = useColorModeValue('border.subtle', 'whiteAlpha.200');
   const percent = Math.min((habit.completed_today / habit.goal_per_day) * 100, 100);
+  const tooltipStyles = useColorModeValue(
+    {
+      background: 'rgba(255, 255, 255, 0.95)',
+      borderRadius: '14px',
+      color: '#1f2937',
+      border: '1px solid rgba(15, 23, 42, 0.08)'
+    },
+    {
+      background: 'rgba(17, 24, 39, 0.92)',
+      borderRadius: '14px',
+      color: '#f9fafb',
+      border: '1px solid rgba(148, 163, 184, 0.35)'
+    }
+  );
 
   const chartData = habit.weekly_progress.map((value, index) => ({
     day: ['S', 'M', 'T', 'W', 'T', 'F', 'S'][index],
@@ -115,10 +129,10 @@ const HabitCard = ({ habit, onUpdate }: HabitCardProps) => {
         bg="rgba(251, 146, 60, 0.16)"
       />
       <Stack spacing={1} position="relative" zIndex={1}>
-        <Text fontWeight="semibold" color="brand.800">
+        <Text fontWeight="semibold" color="text.primary">
           {habit.title}
         </Text>
-        <Text fontSize="sm" color="brand.900" opacity={0.65}>
+        <Text fontSize="sm" color="text.secondary">
           {habit.completed_today}/{habit.goal_per_day} today • streak {habit.streak}
         </Text>
       </Stack>
@@ -128,12 +142,7 @@ const HabitCard = ({ habit, onUpdate }: HabitCardProps) => {
           <BarChart data={chartData}>
             <Tooltip
               cursor={{ fill: 'rgba(249, 115, 22, 0.12)' }}
-              contentStyle={{
-                background: 'rgba(71, 51, 39, 0.92)',
-                borderRadius: '14px',
-                color: 'white',
-                border: 'none'
-              }}
+              contentStyle={tooltipStyles}
             />
             <XAxis dataKey="day" axisLine={false} tickLine={false} stroke="rgba(148, 163, 184, 0.9)" />
             <YAxis hide domain={[0, Math.max(...habit.weekly_progress, habit.goal_per_day)]} />
