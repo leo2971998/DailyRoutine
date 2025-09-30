@@ -34,6 +34,30 @@ export interface ProgressSnapshot {
   habits_total: number;
 }
 
+export type DailyLogSource = 'manual' | 'checklist';
+
+export interface DailyLogMood {
+  id: string;
+  label: string;
+  emoji: string;
+}
+
+export interface DailyLogEntry {
+  id: string;
+  timestamp: string;
+  content: string;
+  source: DailyLogSource;
+  related_task_id?: string | null;
+  mood?: DailyLogMood | null;
+  details?: string | null;
+}
+
+export interface DailyLogDay {
+  date: string;
+  focus: string;
+  entries: DailyLogEntry[];
+}
+
 export interface GroupChallenge {
   id: string;
   title: string;
@@ -88,4 +112,5 @@ export interface DashboardState {
   schedule: ScheduleEvent[];
   progress: ProgressSnapshot;
   group_progress: GroupProgress;
+  daily_log: DailyLogDay;
 }
