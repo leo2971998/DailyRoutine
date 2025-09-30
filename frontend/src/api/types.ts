@@ -34,6 +34,51 @@ export interface ProgressSnapshot {
   habits_total: number;
 }
 
+export interface GroupChallenge {
+  id: string;
+  title: string;
+  timeframe: string;
+  goal: number;
+  current: number;
+  unit: string;
+}
+
+export interface GroupMember {
+  id: string;
+  name: string;
+  avatar_color: string;
+  progress: number;
+  streak: number;
+}
+
+export interface ReactionOption {
+  id: string;
+  emoji: string;
+  label: string;
+}
+
+export interface ActivityReaction extends ReactionOption {
+  count: number;
+}
+
+export interface ActivityEntry {
+  id: string;
+  member_id: string;
+  summary: string;
+  timestamp: string;
+  highlight?: string | null;
+  reactions: ActivityReaction[];
+}
+
+export interface GroupProgress {
+  group_name: string;
+  mission: string;
+  challenge: GroupChallenge;
+  leaderboard: GroupMember[];
+  activity_feed: ActivityEntry[];
+  reaction_options: ReactionOption[];
+}
+
 export interface DashboardState {
   user: string;
   greeting: string;
@@ -42,4 +87,5 @@ export interface DashboardState {
   habits: Habit[];
   schedule: ScheduleEvent[];
   progress: ProgressSnapshot;
+  group_progress: GroupProgress;
 }

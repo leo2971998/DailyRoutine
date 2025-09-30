@@ -62,6 +62,69 @@ class ProgressSnapshot(BaseModel):
     habits_total: int
 
 
+class GroupChallenge(BaseModel):
+    """Shared challenge information for the group progress widget."""
+
+    id: str
+    title: str
+    timeframe: str
+    goal: int = Field(..., ge=1)
+    current: int = Field(..., ge=0)
+    unit: str = Field("sessions", description="Unit of measurement for the goal")
+
+
+class GroupMember(BaseModel):
+    """Represents a friend participating in the shared routine."""
+
+    id: str
+    name: str
+    avatar_color: str = Field(
+        ...,
+        description="Hex color used to render the member's avatar badge.",
+    )
+    progress: int = Field(..., ge=0)
+    streak: int = Field(..., ge=0)
+
+
+class ActivityReaction(BaseModel):
+    """A reaction applied to an activity feed item."""
+
+    id: str
+    emoji: str
+    label: str
+    count: int = Field(0, ge=0)
+
+
+class ActivityEntry(BaseModel):
+    """An entry in the live group activity feed."""
+
+    id: str
+    member_id: str
+    summary: str
+    timestamp: datetime
+    highlight: Optional[str] = None
+    reactions: List[ActivityReaction] = Field(default_factory=list)
+
+
+class ReactionOption(BaseModel):
+    """Palette of quick reactions available to group members."""
+
+    id: str
+    emoji: str
+    label: str
+
+
+class GroupProgress(BaseModel):
+    """Social layer surfaced in the group progress widget."""
+
+    group_name: str
+    mission: str
+    challenge: GroupChallenge
+    leaderboard: List[GroupMember]
+    activity_feed: List[ActivityEntry]
+    reaction_options: List[ReactionOption]
+
+
 class DashboardState(BaseModel):
     """Top-level structure served to the client."""
 
@@ -72,6 +135,7 @@ class DashboardState(BaseModel):
     habits: List[Habit]
     schedule: List[ScheduleEvent]
     progress: ProgressSnapshot
+    group_progress: GroupProgress
 
 
 class TaskUpdate(BaseModel):

@@ -1,20 +1,23 @@
-"""FastAPI application that powers the Daily Routine dashboard."""
+"""Flask application that powers the Daily Routine dashboard."""
 from __future__ import annotations
 
-import asyncio
+import json
+import sys
 from datetime import datetime
+from pathlib import Path
+from threading import RLock
 from typing import Callable
 
-from fastapi import Depends, FastAPI, HTTPException, WebSocket, WebSocketDisconnect
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import ORJSONResponse
+if __package__ is None or __package__ == "":
+    sys.path.append(str(Path(__file__).resolve().parent.parent))
+    __package__ = "app"
 
-from .models import (
-    DashboardEvent,
-    DashboardState,
-    HabitProgressUpdate,
-    TaskUpdate,
-)
+from flask import Flask, jsonify, request
+from flask_cors import CORS
+from flask_socketio import SocketIO, join_room, leave_room
+from pydantic import ValidationError
+
+from .models import DashboardEvent, DashboardState, HabitProgressUpdate, TaskUpdate
 from .storage import (
     load_state,
     recompute_progress,
@@ -22,133 +25,163 @@ from .storage import (
     update_habit_progress,
     update_task,
 )
-from .websocket_manager import WebsocketManager
 
 DEFAULT_USER_ID = "wendy"
 
 
 class StateContainer:
-    """Holds the mutable dashboard state in memory."""
+    """Thread-safe holder for the mutable dashboard state."""
 
     def __init__(self) -> None:
         self._state = load_state()
-        self._lock = asyncio.Lock()
+        self._lock = RLock()
 
-    async def read(self) -> DashboardState:
-        async with self._lock:
+    def read(self) -> DashboardState:
+        with self._lock:
             return self._state.copy(deep=True)
 
-    async def mutate(self, mutate_fn: Callable[[DashboardState], None]) -> DashboardState:
-        async with self._lock:
+    def mutate(self, mutate_fn: Callable[[DashboardState], None]) -> DashboardState:
+        with self._lock:
             mutate_fn(self._state)
             save_state(self._state)
             return self._state.copy(deep=True)
 
 
 state_container = StateContainer()
-manager = WebsocketManager()
-
-app = FastAPI(
-    title="Daily Routine Dashboard API",
-    default_response_class=ORJSONResponse,
-)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+app = Flask(__name__)
+CORS(app)
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 
-async def get_state() -> DashboardState:
-    return await state_container.read()
+def _serialize_state(state: DashboardState) -> dict:
+    """Convert a Pydantic model into a JSON-ready dictionary."""
+
+    return json.loads(state.json())
 
 
-@app.get("/api/dashboard", response_model=DashboardState)
-async def read_dashboard(state: DashboardState = Depends(get_state)) -> DashboardState:
+@app.route("/api/dashboard", methods=["GET"])
+def read_dashboard() -> tuple[dict, int]:
     """Return the entire dashboard payload in a single request."""
-    return state
+
+    state = state_container.read()
+    return _serialize_state(state), 200
 
 
-@app.patch("/api/tasks/{task_id}", response_model=DashboardState)
-async def toggle_task(task_id: str, update: TaskUpdate) -> DashboardState:
-    """Toggle a task and broadcast the change to all connected clients."""
-
-    async def mutator(current_state: DashboardState) -> None:
-        try:
-            update_task(current_state.checklist, task_id, update.completed)
-        except KeyError as exc:
-            raise HTTPException(status_code=404, detail=str(exc)) from exc
-        recompute_progress(current_state)
-
-    state = await state_container.mutate(mutator)
-    await manager.send_json(
-        DEFAULT_USER_ID,
-        DashboardEvent(
-            type="task_updated",
-            payload={
-                "taskId": task_id,
-                "completed": update.completed,
-                "progress": state.progress.dict(),
-            },
-        ).dict(),
-    )
-    return state
-
-
-@app.patch("/api/habits/{habit_id}", response_model=DashboardState)
-async def update_habit(habit_id: str, update: HabitProgressUpdate) -> DashboardState:
-    """Update a habit's progress and propagate the event through websockets."""
-
-    async def mutator(current_state: DashboardState) -> None:
-        try:
-            update_habit_progress(
-                current_state.habits,
-                habit_id,
-                completed_today=update.completed_today,
-                streak=update.streak,
-            )
-        except KeyError as exc:
-            raise HTTPException(status_code=404, detail=str(exc)) from exc
-        recompute_progress(current_state)
-
-    state = await state_container.mutate(mutator)
-    await manager.send_json(
-        DEFAULT_USER_ID,
-        DashboardEvent(
-            type="habit_updated",
-            payload={
-                "habitId": habit_id,
-                "completedToday": update.completed_today,
-                "streak": update.streak,
-                "progress": state.progress.dict(),
-            },
-        ).dict(),
-    )
-    return state
-
-
-@app.websocket("/ws/dashboard")
-async def dashboard_socket(websocket: WebSocket) -> None:
-    """Bidirectional channel used to push real-time dashboard updates."""
-    user_id = websocket.query_params.get("userId", DEFAULT_USER_ID)
-    await manager.connect(user_id, websocket)
+def _parse_payload(model_cls, payload: dict):
     try:
-        while True:
-            await websocket.receive_text()
-    except WebSocketDisconnect:
-        await manager.disconnect(user_id, websocket)
+        return model_cls.parse_obj(payload)
+    except ValidationError as exc:
+        response = {"detail": exc.errors()}
+        return jsonify(response), 422
 
 
-@app.on_event("startup")
-async def refresh_progress_snapshot() -> None:
+@app.route("/api/tasks/<task_id>", methods=["PATCH"])
+def toggle_task(task_id: str):
+    """Toggle a task and broadcast the change to connected clients."""
+
+    payload = request.get_json(silent=True)
+    if payload is None:
+        return jsonify({"detail": "Invalid or missing JSON payload."}), 400
+
+    parsed = _parse_payload(TaskUpdate, payload)
+    if isinstance(parsed, tuple):
+        return parsed
+    update = parsed
+
+    def mutator(current_state: DashboardState) -> None:
+        update_task(current_state.checklist, task_id, update.completed)
+        recompute_progress(current_state)
+
+    try:
+        state = state_container.mutate(mutator)
+    except KeyError as exc:
+        return jsonify({"detail": str(exc)}), 404
+
+    event = DashboardEvent(
+        type="task_updated",
+        payload={
+            "taskId": task_id,
+            "completed": update.completed,
+            "progress": state.progress.dict(),
+        },
+    )
+    socketio.emit("dashboard_event", event.dict(), room=DEFAULT_USER_ID)
+    return _serialize_state(state), 200
+
+
+@app.route("/api/habits/<habit_id>", methods=["PATCH"])
+def update_habit(habit_id: str):
+    """Update a habit's progress and propagate the change to subscribers."""
+
+    payload = request.get_json(silent=True)
+    if payload is None:
+        return jsonify({"detail": "Invalid or missing JSON payload."}), 400
+
+    parsed = _parse_payload(HabitProgressUpdate, payload)
+    if isinstance(parsed, tuple):
+        return parsed
+    update = parsed
+
+    def mutator(current_state: DashboardState) -> None:
+        update_habit_progress(
+            current_state.habits,
+            habit_id,
+            completed_today=update.completed_today,
+            streak=update.streak,
+        )
+        recompute_progress(current_state)
+
+    try:
+        state = state_container.mutate(mutator)
+    except KeyError as exc:
+        return jsonify({"detail": str(exc)}), 404
+
+    event = DashboardEvent(
+        type="habit_updated",
+        payload={
+            "habitId": habit_id,
+            "completedToday": update.completed_today,
+            "streak": update.streak,
+            "progress": state.progress.dict(),
+        },
+    )
+    socketio.emit("dashboard_event", event.dict(), room=DEFAULT_USER_ID)
+    return _serialize_state(state), 200
+
+
+@socketio.on("connect")
+def handle_connect():
+    user_id = request.args.get("userId", DEFAULT_USER_ID)
+    join_room(user_id)
+    socketio.emit(
+        "dashboard_event",
+        DashboardEvent(type="connected", payload={"timestamp": datetime.utcnow().isoformat()}).dict(),
+        room=user_id,
+    )
+
+
+@socketio.on("disconnect")
+def handle_disconnect():
+    user_id = request.args.get("userId", DEFAULT_USER_ID)
+    leave_room(user_id)
+
+
+@app.before_first_request
+def refresh_progress_snapshot() -> None:
     """Ensure the persisted file has an up-to-date progress snapshot."""
-    await state_container.mutate(recompute_progress)
+
+    def _mutator(state: DashboardState) -> None:
+        recompute_progress(state)
+
+    state_container.mutate(_mutator)
 
 
-@app.get("/health", tags=["system"])
-async def healthcheck() -> dict:
+@app.route("/health", methods=["GET"])
+def healthcheck() -> tuple[dict, int]:
     """Basic health check used by deployment platforms."""
-    return {"status": "ok", "timestamp": datetime.utcnow().isoformat()}
+
+    return {"status": "ok", "timestamp": datetime.utcnow().isoformat()}, 200
+
+
+if __name__ == "__main__":
+    socketio.run(app, host="0.0.0.0", port=8000)
