@@ -8,6 +8,7 @@ from pathlib import Path
 from threading import RLock
 from typing import Callable
 
+# Make 'app' a package when running directly
 if __package__ is None or __package__ == "":
     sys.path.append(str(Path(__file__).resolve().parent.parent))
     __package__ = "app"
@@ -55,19 +56,18 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 
 def _serialize_state(state: DashboardState) -> dict:
     """Convert a Pydantic model into a JSON-ready dictionary."""
-
     return json.loads(state.json())
 
 
 @app.route("/api/dashboard", methods=["GET"])
 def read_dashboard() -> tuple[dict, int]:
     """Return the entire dashboard payload in a single request."""
-
     state = state_container.read()
     return _serialize_state(state), 200
 
 
 def _parse_payload(model_cls, payload: dict):
+    """Parse and validate JSON payload into the given Pydantic model."""
     try:
         return model_cls.parse_obj(payload)
     except ValidationError as exc:
@@ -78,7 +78,6 @@ def _parse_payload(model_cls, payload: dict):
 @app.route("/api/tasks/<task_id>", methods=["PATCH"])
 def toggle_task(task_id: str):
     """Toggle a task and broadcast the change to connected clients."""
-
     payload = request.get_json(silent=True)
     if payload is None:
         return jsonify({"detail": "Invalid or missing JSON payload."}), 400
@@ -86,8 +85,7 @@ def toggle_task(task_id: str):
     parsed = _parse_payload(TaskUpdate, payload)
     if isinstance(parsed, tuple):
         return parsed
-    update = parsed
-
+    update: TaskUpdate = parsed
 
     def mutator(current_state: DashboardState) -> None:
         update_task(current_state.checklist, task_id, update.completed)
@@ -113,7 +111,6 @@ def toggle_task(task_id: str):
 @app.route("/api/habits/<habit_id>", methods=["PATCH"])
 def update_habit(habit_id: str):
     """Update a habit's progress and propagate the change to subscribers."""
-
     payload = request.get_json(silent=True)
     if payload is None:
         return jsonify({"detail": "Invalid or missing JSON payload."}), 400
@@ -121,7 +118,7 @@ def update_habit(habit_id: str):
     parsed = _parse_payload(HabitProgressUpdate, payload)
     if isinstance(parsed, tuple):
         return parsed
-    update = parsed
+    update: HabitProgressUpdate = parsed
 
     def mutator(current_state: DashboardState) -> None:
         update_habit_progress(
@@ -156,7 +153,10 @@ def handle_connect():
     join_room(user_id)
     socketio.emit(
         "dashboard_event",
-        DashboardEvent(type="connected", payload={"timestamp": datetime.utcnow().isoformat()}).dict(),
+        DashboardEvent(
+            type="connected",
+            payload={"timestamp": datetime.utcnow().isoformat()},
+        ).dict(),
         room=user_id,
     )
 
@@ -167,21 +167,35 @@ def handle_disconnect():
     leave_room(user_id)
 
 
-@app.before_first_request
 def refresh_progress_snapshot() -> None:
     """Ensure the persisted file has an up-to-date progress snapshot."""
-
     def _mutator(state: DashboardState) -> None:
         recompute_progress(state)
     state_container.mutate(_mutator)
 
 
+# ---- One-time init that works for both __main__ and WSGI imports ----
+_initialized = False
+
+def _initialize_once() -> None:
+    global _initialized
+    if _initialized:
+        return
+    with app.app_context():
+        refresh_progress_snapshot()
+    _initialized = True
+
+# Run at import time so WSGI servers (gunicorn/uwsgi) also initialize
+_initialize_once()
+
+
 @app.route("/health", methods=["GET"])
 def healthcheck() -> tuple[dict, int]:
     """Basic health check used by deployment platforms."""
-
     return {"status": "ok", "timestamp": datetime.utcnow().isoformat()}, 200
 
 
 if __name__ == "__main__":
+    # In case someone runs `python main.py`, this will no-op if already initialized.
+    _initialize_once()
     socketio.run(app, host="0.0.0.0", port=8000)

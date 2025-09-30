@@ -39,7 +39,15 @@
       "goal_per_day": 8,
       "completed_today": 5,
       "streak": 7,
-      "weekly_progress": [8, 8, 7, 6, 8, 5, 5]
+      "weekly_progress": [
+        8,
+        8,
+        7,
+        6,
+        8,
+        5,
+        5
+      ]
     },
     {
       "id": "habit-reading",
@@ -47,7 +55,15 @@
       "goal_per_day": 1,
       "completed_today": 0,
       "streak": 3,
-      "weekly_progress": [1, 1, 1, 0, 1, 1, 0]
+      "weekly_progress": [
+        1,
+        1,
+        1,
+        0,
+        1,
+        1,
+        0
+      ]
     },
     {
       "id": "habit-steps",
@@ -55,7 +71,15 @@
       "goal_per_day": 1,
       "completed_today": 0,
       "streak": 5,
-      "weekly_progress": [1, 1, 1, 1, 1, 0, 0]
+      "weekly_progress": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        0,
+        0
+      ]
     }
   ],
   "schedule": [
@@ -90,7 +114,7 @@
   "progress": {
     "tasks_completed": 0,
     "tasks_total": 4,
-    "habits_completed": 1,
+    "habits_completed": 0,
     "habits_total": 3
   },
   "group_progress": {
@@ -142,8 +166,18 @@
         "timestamp": "2023-12-06T07:10:00",
         "highlight": "New personal best pace!",
         "reactions": [
-          { "id": "cheer", "emoji": "🎉", "label": "Cheer", "count": 4 },
-          { "id": "power", "emoji": "💪", "label": "Power Up", "count": 2 }
+          {
+            "id": "cheer",
+            "emoji": "\ud83c\udf89",
+            "label": "Cheer",
+            "count": 4
+          },
+          {
+            "id": "power",
+            "emoji": "\ud83d\udcaa",
+            "label": "Power Up",
+            "count": 2
+          }
         ]
       },
       {
@@ -151,8 +185,14 @@
         "member_id": "theo",
         "summary": "Theo shared a 20-minute power-up playlist for tomorrow's circuit.",
         "timestamp": "2023-12-06T08:45:00",
+        "highlight": null,
         "reactions": [
-          { "id": "spark", "emoji": "⚡", "label": "Spark", "count": 3 }
+          {
+            "id": "spark",
+            "emoji": "\u26a1",
+            "label": "Spark",
+            "count": 3
+          }
         ]
       },
       {
@@ -160,16 +200,39 @@
         "member_id": "mira",
         "summary": "Mira completed a focused breathwork reset before the design sprint.",
         "timestamp": "2023-12-06T09:15:00",
+        "highlight": null,
         "reactions": [
-          { "id": "cheer", "emoji": "🎉", "label": "Cheer", "count": 2 },
-          { "id": "spark", "emoji": "⚡", "label": "Spark", "count": 1 }
+          {
+            "id": "cheer",
+            "emoji": "\ud83c\udf89",
+            "label": "Cheer",
+            "count": 2
+          },
+          {
+            "id": "spark",
+            "emoji": "\u26a1",
+            "label": "Spark",
+            "count": 1
+          }
         ]
       }
     ],
     "reaction_options": [
-      { "id": "cheer", "emoji": "🎉", "label": "Cheer" },
-      { "id": "power", "emoji": "💪", "label": "Power Up" },
-      { "id": "spark", "emoji": "⚡", "label": "Spark" }
+      {
+        "id": "cheer",
+        "emoji": "\ud83c\udf89",
+        "label": "Cheer"
+      },
+      {
+        "id": "power",
+        "emoji": "\ud83d\udcaa",
+        "label": "Power Up"
+      },
+      {
+        "id": "spark",
+        "emoji": "\u26a1",
+        "label": "Spark"
+      }
     ]
   }
 }
