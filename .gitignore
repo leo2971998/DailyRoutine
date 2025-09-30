@@ -9,3 +9,6 @@ __pycache__
 # Environment
 .env
 .DS_Store
+/.idea
+/backend/venv
+frontend/package-lock.json
