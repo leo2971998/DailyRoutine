@@ -88,6 +88,7 @@ def toggle_task(task_id: str):
         return parsed
     update = parsed
 
+
     def mutator(current_state: DashboardState) -> None:
         update_task(current_state.checklist, task_id, update.completed)
         recompute_progress(current_state)
@@ -172,7 +173,6 @@ def refresh_progress_snapshot() -> None:
 
     def _mutator(state: DashboardState) -> None:
         recompute_progress(state)
-
     state_container.mutate(_mutator)
 
 
