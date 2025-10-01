@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 
 from bson import ObjectId
@@ -38,12 +38,15 @@ async def create_event(payload: ScheduleEventCreate) -> ScheduleEvent:
 
     now = datetime.utcnow()
     doc = payload.model_dump(exclude_none=True)
+    start_time = doc.get("start_time") or now
+    doc["start_time"] = start_time
+    doc["end_time"] = doc.get("end_time") or (start_time + timedelta(hours=1))
     doc.update({"created_at": now, "updated_at": now})
 
     res = await events.insert_one(doc)
     saved = await events.find_one({"_id": res.inserted_id})
     assert saved is not None
-    return ScheduleEvent.model_validate(saved)
+    return ScheduleEvent.from_mongo(saved)
 
 
 @router.get("", response_model=ListResponse[ScheduleEvent])
@@ -67,7 +70,7 @@ async def list_events(
     cursor = events.find(query).sort("start_time", 1)
     items: list[ScheduleEvent] = []
     async for doc in cursor:
-        items.append(ScheduleEvent.model_validate(doc))
+        items.append(ScheduleEvent.from_mongo(doc))
     return ListResponse[ScheduleEvent](items=items, total=len(items))
 
 
