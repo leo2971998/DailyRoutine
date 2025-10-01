@@ -15,13 +15,21 @@ else:  # pragma: no cover - handles ``uvicorn main:app`` when cwd==api/
     from app.schemas.common import ListResponse
     from app.schemas.habit_log import HabitLog, HabitLogCreate
 
-router = APIRouter(prefix="/v1/habit-logs", tags=["habit_logs"])
+if __package__:
+    from .app.utils.object_ids import resolve_object_id
+else:  # pragma: no cover
+    from app.utils.object_ids import resolve_object_id
+
+
+router = APIRouter(prefix="/habit-logs", tags=["habit_logs"])
+alias_router = APIRouter(prefix="/habit_logs", tags=["habit_logs"])
 
 
 def _parse_object_id(value: str, field: str) -> ObjectId:
-    if not ObjectId.is_valid(value):
-        raise HTTPException(status_code=400, detail=f"Invalid {field}")
-    return ObjectId(value)
+    try:
+        return resolve_object_id(value, field)
+    except ValueError as exc:  # pragma: no cover - defensive guard
+        raise HTTPException(status_code=400, detail=f"Invalid {field}") from exc
 
 
 @router.post("", response_model=HabitLog, status_code=201)
@@ -68,3 +76,21 @@ async def list_habit_logs(
     async for doc in cursor:
         items.append(HabitLog.model_validate(doc))
     return ListResponse[HabitLog](items=items, total=len(items))
+
+
+alias_router.add_api_route(
+    "",
+    create_habit_log,
+    methods=["POST"],
+    response_model=HabitLog,
+    status_code=201,
+    include_in_schema=False,
+)
+alias_router.add_api_route(
+    "",
+    list_habit_logs,
+    methods=["GET"],
+    response_model=ListResponse[HabitLog],
+    include_in_schema=False,
+)
+

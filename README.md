@@ -43,6 +43,21 @@ An interactive daily routine tracker inspired by the Fitplan dashboard aesthetic
    curl http://localhost:8000/health/live
    ```
 
+### API Versioning & Demo Aliases
+- The FastAPI routers are mounted at both the root (e.g. `/tasks`) and the
+  versioned `/v1` prefix so existing clients continue to work during the
+  migration.
+- Habit log routes now respond to both `/habit-logs` and `/habit_logs` for
+  compatibility.
+- If you rely on the seeded demo data, map any friendly identifiers to the
+  MongoDB ObjectId stored in your database by setting these variables in
+  `api/.env`:
+  ```bash
+  echo "DEMO_USER_ALIAS=wendy" >> api/.env
+  echo "DEMO_USER_ID=68dcaa1e450fee4dd3d6b17b" >> api/.env
+  # or provide multiple entries: DEMO_USER_ALIASES=wendy:68dc...,alex:...
+  ```
+
 ### Frontend Setup
 1. Install Node dependencies:
    ```bash
@@ -57,8 +72,9 @@ An interactive daily routine tracker inspired by the Fitplan dashboard aesthetic
    echo "VITE_DEMO_USER_ID=your-demo-user-id" >> .env
    ```
 
-   > The frontend automatically appends `/v1` to the configured API URL, so point
-   > `VITE_API_URL` to the root of your FastAPI server.
+   > The frontend automatically targets the `/v1` API routes, so you can point
+   > `VITE_API_URL` at the root of your FastAPI server (with or without a
+   > trailing slash or `/v1`).
 
 3. Start the Vite dev server:
    ```bash

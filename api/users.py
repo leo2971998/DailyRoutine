@@ -12,13 +12,20 @@ else:  # pragma: no cover - handles ``uvicorn main:app`` when cwd==api/
     from app.db import get_db
     from app.schemas.user import User, UserCreate
 
-router = APIRouter(prefix="/v1/users", tags=["users"])
+if __package__:
+    from .app.utils.object_ids import resolve_object_id
+else:  # pragma: no cover
+    from app.utils.object_ids import resolve_object_id
+
+
+router = APIRouter(prefix="/users", tags=["users"])
 
 
 def _parse_object_id(value: str, field: str) -> ObjectId:
-    if not ObjectId.is_valid(value):
-        raise HTTPException(status_code=400, detail=f"Invalid {field}")
-    return ObjectId(value)
+    try:
+        return resolve_object_id(value, field)
+    except ValueError as exc:  # pragma: no cover - defensive guard
+        raise HTTPException(status_code=400, detail=f"Invalid {field}") from exc
 
 
 @router.post("", response_model=User, status_code=201)

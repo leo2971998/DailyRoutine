@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+from typing import Dict
 
 from dotenv import load_dotenv
 
@@ -43,3 +44,30 @@ API_CORS_ORIGINS: list[str] = [
     for o in os.getenv("API_CORS_ORIGINS", "").split(",")
     if o.strip()
 ]
+
+
+def _parse_alias_map(raw: str) -> Dict[str, str]:
+    mapping: Dict[str, str] = {}
+    for chunk in raw.split(","):
+        if ":" not in chunk:
+            continue
+        alias, target = chunk.split(":", 1)
+        alias_key = alias.strip()
+        target_value = target.strip()
+        if alias_key and target_value:
+            mapping[alias_key] = target_value
+    return mapping
+
+
+_alias_map = _parse_alias_map(os.getenv("DEMO_USER_ALIASES", ""))
+if not _alias_map:
+    default_alias = os.getenv("DEMO_USER_ALIAS", "wendy")
+    default_target = os.getenv("DEMO_USER_ID", "68dcaa1e450fee4dd3d6b17b")
+    if default_alias and default_target:
+        _alias_map[default_alias] = default_target
+
+for alias, target in list(_alias_map.items()):
+    _alias_map.setdefault(target, target)
+
+DEMO_USER_ALIASES: Dict[str, str] = _alias_map
+
