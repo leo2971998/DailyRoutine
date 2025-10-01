@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -49,9 +50,33 @@ class StateContainer:
 
 
 state_container = StateContainer()
+
+
+def _parse_origins(raw_value: str | None) -> list[str] | str:
+    """Return a list of origins or '*' when all origins are allowed."""
+
+    if not raw_value:
+        return "*"
+
+    value = raw_value.strip()
+    if value == "*":
+        return "*"
+
+    origins = [origin.strip() for origin in value.split(",") if origin.strip()]
+    return origins or "*"
+
+
+cors_origins = _parse_origins(os.getenv("CORS_ALLOWED_ORIGINS"))
+
 app = Flask(__name__)
-CORS(app)
-socketio = SocketIO(app, cors_allowed_origins="*")
+app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "dev-secret-key")
+
+if cors_origins == "*":
+    CORS(app)
+else:
+    CORS(app, resources={r"/*": {"origins": cors_origins}})
+
+socketio = SocketIO(app, cors_allowed_origins=cors_origins)
 
 
 def _serialize_state(state: DashboardState) -> dict:
