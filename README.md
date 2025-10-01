@@ -12,7 +12,10 @@ An interactive daily routine tracker inspired by the Fitplan dashboard aesthetic
    source .venv/bin/activate
    pip install -r requirements.txt
    ```
-2. Run the API with Uvicorn:
+2. Copy `example.env` to `.env` and update the values. The backend will automatically
+   read environment variables from `.env` files located at either the repository root or
+   within `api/schemas/.env`.
+3. Run the API with Uvicorn:
    ```bash
    uvicorn app.main:app --reload --port 8000
    ```
