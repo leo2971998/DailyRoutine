@@ -1,78 +1,91 @@
-# tasks.py
+from __future__ import annotations
+
 from datetime import datetime
-from fastapi import APIRouter, HTTPException, Query
-from pydantic import BaseModel, Field
-from typing import Optional, List
+from typing import Optional
+
 from bson import ObjectId
-from api.app.db import get_db
+from fastapi import APIRouter, HTTPException, Query
+
+if __package__:
+    from .app.db import get_db
+    from .app.schemas.common import ListResponse
+    from .app.schemas.task import Task, TaskCreate, TaskUpdate
+else:  # pragma: no cover - handles ``uvicorn main:app`` when cwd==api/
+    from app.db import get_db
+    from app.schemas.common import ListResponse
+    from app.schemas.task import Task, TaskCreate, TaskUpdate
 
 router = APIRouter(prefix="/v1/tasks", tags=["tasks"])
 
 
-class Task(BaseModel):
-    id: str = Field(alias="_id")
-    user_id: str
-    title: str
-    is_completed: bool = False
-    created_at: datetime
-    updated_at: datetime
-
-
-class TaskCreate(BaseModel):
-    user_id: str
-    title: str
+def _parse_object_id(value: str, field: str) -> ObjectId:
+    if not ObjectId.is_valid(value):
+        raise HTTPException(status_code=400, detail=f"Invalid {field}")
+    return ObjectId(value)
 
 
 @router.post("", response_model=Task, status_code=201)
-async def create_task(payload: TaskCreate):
+async def create_task(payload: TaskCreate) -> Task:
     db = get_db()
-    doc = {
-        "user_id": payload.user_id,
-        "title": payload.title,
+    tasks = db.tasks
+
+    now = datetime.utcnow()
+    doc = payload.model_dump(exclude_none=True)
+    doc.update({
         "is_completed": False,
-        "created_at": datetime.utcnow(),
-        "updated_at": datetime.utcnow(),
-    }
-    res = db.tasks.insert_one(doc)
-    saved = db.tasks.find_one({"_id": res.inserted_id})
-    return Task.model_validate({**saved, "_id": str(saved["_id"])})
+        "created_at": now,
+        "updated_at": now,
+    })
+
+    res = await tasks.insert_one(doc)
+    saved = await tasks.find_one({"_id": res.inserted_id})
+    assert saved is not None
+    return Task.model_validate(saved)
 
 
-@router.get("", response_model=List[Task])
+@router.get("", response_model=ListResponse[Task])
 async def list_tasks(
-        user_id: str = Query(...),
-        is_completed: Optional[bool] = Query(None),
-):
+    user_id: str = Query(..., description="User ID"),
+    is_completed: Optional[bool] = Query(None, description="Filter by completion status"),
+) -> ListResponse[Task]:
     db = get_db()
-    query = {"user_id": user_id}
+    query: dict[str, object] = {"user_id": _parse_object_id(user_id, "user_id")}
     if is_completed is not None:
         query["is_completed"] = is_completed
+
     cursor = db.tasks.find(query).sort("created_at", -1)
-    items: List[Task] = []
+    items: list[Task] = []
     async for doc in cursor:
-        items.append(Task.model_validate({**doc, "_id": str(doc["_id"])}))
-    return items
+        items.append(Task.model_validate(doc))
+    return ListResponse[Task](items=items, total=len(items))
 
 
 @router.patch("/{task_id}", response_model=Task)
-async def update_task(task_id: str, is_completed: Optional[bool] = None, title: Optional[str] = None):
+async def update_task(task_id: str, payload: TaskUpdate) -> Task:
     db = get_db()
-    update = {"updated_at": datetime.utcnow()}
-    if is_completed is not None:
-        update["is_completed"] = is_completed
-    if title is not None:
-        update["title"] = title
-    res = db.tasks.update_one({"_id": ObjectId(task_id)}, {"$set": update})
+    tasks = db.tasks
+
+    oid = _parse_object_id(task_id, "task_id")
+    update_data = payload.model_dump(exclude_none=True, exclude_unset=True)
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No fields to update")
+    update_data["updated_at"] = datetime.utcnow()
+
+    res = await tasks.update_one({"_id": oid}, {"$set": update_data})
     if res.matched_count == 0:
         raise HTTPException(status_code=404, detail="Task not found")
-    saved = db.tasks.find_one({"_id": ObjectId(task_id)})
-    return Task.model_validate({**saved, "_id": str(saved["_id"])})
+
+    saved = await tasks.find_one({"_id": oid})
+    assert saved is not None
+    return Task.model_validate(saved)
 
 
 @router.delete("/{task_id}", status_code=204)
-async def delete_task(task_id: str):
+async def delete_task(task_id: str) -> None:
     db = get_db()
-    res = db.tasks.delete_one({"_id": ObjectId(task_id)})
+    tasks = db.tasks
+
+    oid = _parse_object_id(task_id, "task_id")
+    res = await tasks.delete_one({"_id": oid})
     if res.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Task not found")
-    return None
