@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-from fastapi import FastAPI
+from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 if __package__:
     from .app.config import API_CORS_ORIGINS
     from .app.db import close_client
     from .app.indexes import ensure_indexes
+    from .habit_logs import alias_router as habit_logs_alias_router
     from .habit_logs import router as habit_logs_router
     from .habits import router as habits_router
     from .health import router as health_router
@@ -17,6 +18,7 @@ else:  # pragma: no cover - handles ``uvicorn main:app`` when cwd==api/
     from app.config import API_CORS_ORIGINS
     from app.db import close_client
     from app.indexes import ensure_indexes
+    from habit_logs import alias_router as habit_logs_alias_router
     from habit_logs import router as habit_logs_router
     from habits import router as habits_router
     from health import router as health_router
@@ -42,12 +44,25 @@ def make_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    app.include_router(users_router)
-    app.include_router(tasks_router)
-    app.include_router(habits_router)
-    app.include_router(habit_logs_router)
-    app.include_router(schedule_router)
-    app.include_router(health_router)
+    routers = [
+        users_router,
+        tasks_router,
+        habits_router,
+        habit_logs_router,
+        habit_logs_alias_router,
+        schedule_router,
+        health_router,
+    ]
+
+    # Legacy routes without versioning for compatibility
+    for router in routers:
+        app.include_router(router, include_in_schema=False)
+
+    # Versioned API surface mounted at /v1
+    v1_router = APIRouter(prefix="/v1")
+    for router in routers:
+        v1_router.include_router(router)
+    app.include_router(v1_router)
 
     @app.on_event("startup")
     async def _startup() -> None:
