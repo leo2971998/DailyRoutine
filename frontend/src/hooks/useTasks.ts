@@ -1,36 +1,52 @@
 // useTasks.ts
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import axios from 'axios'
+import { api } from '@/lib/api-client'
+import { env } from '@/lib/env'
+import type { ListResponse, Task } from '@/types'
 
-export type Task = {
-    _id: string
-    user_id: string
-    title: string
-    is_completed: boolean
-    created_at: string
-    updated_at: string
+type TaskFilters = {
+    is_completed?: boolean
 }
 
-const API = 'http://127.0.0.1:8000'
+export function useTasks(userId: string = env.DEMO_USER_ID, filters: TaskFilters = {}) {
+    const completion = filters.is_completed
+    const statusKey = completion === undefined ? 'all' : completion ? 'complete' : 'incomplete'
 
-export function useTasks(userId: string, status: 'all' | 'complete' | 'incomplete' = 'all') {
-    return useQuery({
-        queryKey: ['tasks', userId, status],
+    return useQuery<Task[]>({
+        queryKey: ['tasks', userId, statusKey],
         queryFn: async () => {
-            const params: any = { user_id: userId }
-            if (status !== 'all') params.is_completed = status === 'complete'
-            const { data } = await axios.get<Task[]>(`${API}/v1/tasks`, { params })
-            return data
+            if (!userId) {
+                return []
+            }
+
+            const params: Record<string, unknown> = { user_id: userId }
+            if (typeof completion === 'boolean') {
+                params.is_completed = completion
+            }
+
+            const { data } = await api.get<ListResponse<Task>>('/tasks', { params })
+            return data.items
         },
         enabled: !!userId,
     })
 }
 
+type CreateTaskVariables = {
+    description: string
+    due_date: string | null
+    priority: Task['priority']
+    user_id?: string
+}
+
 export function useCreateTask() {
     const qc = useQueryClient()
     return useMutation({
-        mutationFn: async (payload: { user_id: string; title: string }) => {
-            const { data } = await axios.post<Task>(`${API}/v1/tasks`, payload)
+        mutationFn: async ({ user_id, ...payload }: CreateTaskVariables) => {
+            const body = {
+                user_id: user_id ?? env.DEMO_USER_ID,
+                ...payload,
+            }
+            const { data } = await api.post<Task>('/tasks', body)
             return data
         },
         onSuccess: () => {
@@ -44,7 +60,7 @@ export function useToggleTask() {
     return useMutation({
         mutationFn: async (payload: { taskId: string; is_completed: boolean }) => {
             const { taskId, is_completed } = payload
-            const { data } = await axios.patch<Task>(`${API}/v1/tasks/${taskId}`, null, { params: { is_completed } })
+            const { data } = await api.patch<Task>(`/tasks/${taskId}`, { is_completed })
             return data
         },
         onMutate: async ({ taskId, is_completed }) => {
@@ -96,7 +112,7 @@ export function useDeleteTask() {
     const qc = useQueryClient()
     return useMutation({
         mutationFn: async (taskId: string) => {
-            await axios.delete(`${API}/v1/tasks/${taskId}`)
+            await api.delete(`/tasks/${taskId}`)
         },
         onSuccess: () => {
             qc.invalidateQueries({ queryKey: ['tasks'] })

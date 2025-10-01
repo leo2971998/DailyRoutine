@@ -7,7 +7,7 @@ export function useSchedule(userId = env.DEMO_USER_ID) {
   return useQuery({
     queryKey: ['schedule', userId],
     queryFn: async () => {
-      const { data } = await api.get<ListResponse<ScheduleEvent>>('/v1/schedule-events', {
+      const { data } = await api.get<ListResponse<ScheduleEvent>>('/schedule-events', {
         params: { user_id: userId },
       });
       return data.items;

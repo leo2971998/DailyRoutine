@@ -7,7 +7,7 @@ export function useHabits(userId = env.DEMO_USER_ID) {
   return useQuery({
     queryKey: ['habits', userId],
     queryFn: async () => {
-      const { data } = await api.get<ListResponse<Habit>>('/v1/habits', {
+      const { data } = await api.get<ListResponse<Habit>>('/habits', {
         params: { user_id: userId },
       });
       return data.items;
@@ -23,7 +23,7 @@ export function useHabitLogs(userId = env.DEMO_USER_ID, habitId?: string) {
       if (habitId) {
         params.habit_id = habitId;
       }
-      const { data } = await api.get<ListResponse<HabitLog>>('/v1/habit-logs', {
+      const { data } = await api.get<ListResponse<HabitLog>>('/habit-logs', {
         params,
       });
       return data.items;
@@ -46,7 +46,7 @@ export function useLogHabit() {
         status: 'completed',
         ...payload,
       };
-      const { data } = await api.post<HabitLog>('/v1/habit-logs', body);
+      const { data } = await api.post<HabitLog>('/habit-logs', body);
       return data;
     },
     onSuccess: () => {
