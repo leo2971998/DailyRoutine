@@ -4,50 +4,42 @@ import {
   HStack,
   Progress,
   SimpleGrid,
+  Skeleton,
   Stack,
   Text,
-  useColorModeValue
+  useColorModeValue,
+  useToast,
 } from '@chakra-ui/react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import dayjs from 'dayjs';
+import { useMemo } from 'react';
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { updateHabit } from '../api/dashboard';
-import { Habit } from '../api/types';
-import { DASHBOARD_QUERY_KEY } from '../hooks/useDashboard';
+import { useHabits, useHabitLogs, useLogHabit } from '@/hooks/useHabits';
+import type { Habit, HabitLog } from '@/types';
 import CardContainer from './ui/CardContainer';
 
-interface HabitBoardProps {
-  habits: Habit[];
-}
+type HabitWithLogs = Habit & {
+  logs: HabitLog[];
+};
 
-const HabitBoard = ({ habits }: HabitBoardProps) => {
-  const queryClient = useQueryClient();
+const HabitBoard = () => {
+  const toast = useToast();
+  const { data: habits = [], isLoading } = useHabits();
+  const { data: habitLogs = [], isLoading: isLogsLoading } = useHabitLogs();
+  const logHabit = useLogHabit();
 
-  const mutation = useMutation({
-    mutationFn: ({ id, completed_today }: { id: string; completed_today: number }) =>
-      updateHabit(id, { completed_today }),
-    onMutate: async ({ id, completed_today }) => {
-      await queryClient.cancelQueries({ queryKey: DASHBOARD_QUERY_KEY });
-      const previous = queryClient.getQueryData(DASHBOARD_QUERY_KEY);
-      queryClient.setQueryData(DASHBOARD_QUERY_KEY, (old: any) => {
-        if (!old) return old;
-        return {
-          ...old,
-          habits: old.habits.map((habit: Habit) =>
-            habit.id === id ? { ...habit, completed_today } : habit
-          )
-        };
-      });
-      return { previous };
-    },
-    onError: (_error, _variables, context) => {
-      if (context?.previous) {
-        queryClient.setQueryData(DASHBOARD_QUERY_KEY, context.previous);
-      }
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: DASHBOARD_QUERY_KEY });
-    }
-  });
+  const enrichedHabits = useMemo<HabitWithLogs[]>(() => {
+    const logsByHabit = habitLogs.reduce<Record<string, HabitLog[]>>((acc, log) => {
+      if (!acc[log.habit_id]) acc[log.habit_id] = [];
+      acc[log.habit_id].push(log);
+      return acc;
+    }, {});
+    return habits.map((habit) => ({
+      ...habit,
+      logs: logsByHabit[habit._id] ?? [],
+    }));
+  }, [habits, habitLogs]);
+
+  const isBusy = isLoading || isLogsLoading;
 
   return (
     <CardContainer surface="muted">
@@ -61,11 +53,40 @@ const HabitBoard = ({ habits }: HabitBoardProps) => {
           </Text>
         </Stack>
 
-        <SimpleGrid columns={{ base: 1, md: 2 }} spacing={5}>
-          {habits.map((habit) => (
-            <HabitCard key={habit.id} habit={habit} onUpdate={mutation.mutate} />
-          ))}
-        </SimpleGrid>
+        {isBusy ? (
+          <SimpleGrid columns={{ base: 1, md: 2 }} spacing={5}>
+            {Array.from({ length: 2 }).map((_, index) => (
+              <Skeleton key={index} height="220px" borderRadius="20px" />
+            ))}
+          </SimpleGrid>
+        ) : enrichedHabits.length === 0 ? (
+          <Box
+            borderRadius="18px"
+            borderWidth="1px"
+            borderColor="border.subtle"
+            p={8}
+            textAlign="center"
+            bg="surface.cardMuted"
+          >
+            <Text fontWeight="semibold" color="text.primary">
+              No habits yet
+            </Text>
+            <Text fontSize="sm" color="text.secondary">
+              Create a habit in the API to see it appear here.
+            </Text>
+          </Box>
+        ) : (
+          <SimpleGrid columns={{ base: 1, md: 2 }} spacing={5}>
+            {enrichedHabits.map((habit) => (
+              <HabitCard
+                key={habit._id}
+                habit={habit}
+                onLog={(status) => handleLogHabit(logHabit, habit, status, toast)}
+                isLogging={logHabit.isPending}
+              />
+            ))}
+          </SimpleGrid>
+        )}
       </Stack>
       <Box
         position="absolute"
@@ -78,33 +99,35 @@ const HabitBoard = ({ habits }: HabitBoardProps) => {
   );
 };
 
-interface HabitCardProps {
-  habit: Habit;
-  onUpdate: (payload: { id: string; completed_today: number }) => void;
-}
+type HabitCardProps = {
+  habit: HabitWithLogs;
+  onLog: (status: 'completed' | 'missed') => void;
+  isLogging: boolean;
+};
 
-const HabitCard = ({ habit, onUpdate }: HabitCardProps) => {
+const HabitCard = ({ habit, onLog, isLogging }: HabitCardProps) => {
   const accent = useColorModeValue('bg.secondary', 'whiteAlpha.100');
   const border = useColorModeValue('border.subtle', 'whiteAlpha.200');
-  const percent = Math.min((habit.completed_today / habit.goal_per_day) * 100, 100);
+  const todayCount = getRepetitionsForDay(habit.logs, dayjs());
+  const percent = Math.min((todayCount / habit.goal_repetitions) * 100, 100);
   const tooltipStyles = useColorModeValue(
     {
       background: 'rgba(255, 255, 255, 0.95)',
       borderRadius: '14px',
       color: '#1f2937',
-      border: '1px solid rgba(15, 23, 42, 0.08)'
+      border: '1px solid rgba(15, 23, 42, 0.08)',
     },
     {
       background: 'rgba(17, 24, 39, 0.92)',
       borderRadius: '14px',
       color: '#f9fafb',
-      border: '1px solid rgba(148, 163, 184, 0.35)'
+      border: '1px solid rgba(148, 163, 184, 0.35)',
     }
   );
 
-  const chartData = habit.weekly_progress.map((value, index) => ({
+  const chartData = buildWeeklyProgress(habit.logs).map((value, index) => ({
     day: ['S', 'M', 'T', 'W', 'T', 'F', 'S'][index],
-    value
+    value,
   }));
 
   return (
@@ -130,22 +153,19 @@ const HabitCard = ({ habit, onUpdate }: HabitCardProps) => {
       />
       <Stack spacing={1} position="relative" zIndex={1}>
         <Text fontWeight="semibold" color="text.primary">
-          {habit.title}
+          {habit.name}
         </Text>
         <Text fontSize="sm" color="text.secondary">
-          {habit.completed_today}/{habit.goal_per_day} today • streak {habit.streak}
+          {todayCount}/{habit.goal_repetitions} today • goal {habit.goal_period}
         </Text>
       </Stack>
       <Progress value={percent} borderRadius="full" colorScheme="orange" bg="rgba(251, 191, 36, 0.2)" />
       <Box h="120px" position="relative" zIndex={1}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={chartData}>
-            <Tooltip
-              cursor={{ fill: 'rgba(249, 115, 22, 0.12)' }}
-              contentStyle={tooltipStyles}
-            />
+            <Tooltip cursor={{ fill: 'rgba(249, 115, 22, 0.12)' }} contentStyle={tooltipStyles} />
             <XAxis dataKey="day" axisLine={false} tickLine={false} stroke="rgba(148, 163, 184, 0.9)" />
-            <YAxis hide domain={[0, Math.max(...habit.weekly_progress, habit.goal_per_day)]} />
+            <YAxis hide domain={[0, Math.max(...chartData.map((d) => d.value), habit.goal_repetitions)]} />
             <Bar dataKey="value" radius={[12, 12, 12, 12]} fill="url(#barGradient)" />
             <defs>
               <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
@@ -160,23 +180,61 @@ const HabitCard = ({ habit, onUpdate }: HabitCardProps) => {
         <Button
           size="sm"
           variant="ghost"
-          onClick={() =>
-            onUpdate({ id: habit.id, completed_today: Math.max(0, habit.completed_today - 1) })
-          }
+          onClick={() => onLog('missed')}
+          isDisabled={habit.goal_period !== 'daily' || isLogging}
         >
-          -1
+          Missed today
         </Button>
         <Button
           size="sm"
           colorScheme="orange"
           borderRadius="full"
-          onClick={() => onUpdate({ id: habit.id, completed_today: habit.completed_today + 1 })}
+          onClick={() => onLog('completed')}
+          isLoading={isLogging}
         >
-          Add rep
+          Log completion
         </Button>
       </HStack>
     </Stack>
   );
+};
+
+const handleLogHabit = (
+  mutation: ReturnType<typeof useLogHabit>,
+  habit: Habit,
+  status: 'completed' | 'missed',
+  toast: ReturnType<typeof useToast>
+) => {
+  mutation.mutate(
+    {
+      habit_id: habit._id,
+      date: new Date().toISOString(),
+      status,
+      completed_repetitions: status === 'completed' ? 1 : 0,
+    },
+    {
+      onSuccess: () => {
+        toast({ title: status === 'completed' ? 'Habit logged' : 'Marked missed', status: 'success' });
+      },
+      onError: () => {
+        toast({ title: 'Could not update habit log', status: 'error' });
+      },
+    }
+  );
+};
+
+const buildWeeklyProgress = (logs: HabitLog[]) => {
+  const start = dayjs().startOf('day').subtract(6, 'day');
+  return Array.from({ length: 7 }).map((_, index) => {
+    const date = start.add(index, 'day');
+    return getRepetitionsForDay(logs, date);
+  });
+};
+
+const getRepetitionsForDay = (logs: HabitLog[], date: dayjs.Dayjs) => {
+  return logs
+    .filter((log) => dayjs(log.date).isSame(date, 'day'))
+    .reduce((acc, log) => acc + (log.status === 'completed' ? log.completed_repetitions : 0), 0);
 };
 
 export default HabitBoard;

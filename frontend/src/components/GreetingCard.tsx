@@ -7,21 +7,47 @@ import {
   HStack,
   Icon,
   SimpleGrid,
+  Skeleton,
   Stack,
-  Text
+  Text,
 } from '@chakra-ui/react';
-import { FiChevronRight, FiMap, FiSun, FiTrendingUp } from 'react-icons/fi';
-import { DashboardState } from '../api/types';
 import dayjs from 'dayjs';
+import { useMemo } from 'react';
+import { FiChevronRight, FiMap, FiSun, FiTrendingUp } from 'react-icons/fi';
+import type { ProgressSummary, User } from '@/types';
 
-interface GreetingCardProps {
-  state: DashboardState;
-}
+type GreetingCardProps = {
+  user?: User;
+  progress: ProgressSummary;
+  isLoading: boolean;
+};
 
 const quickActions = ['Today', 'Week', 'Custom'];
 
-const GreetingCard = ({ state }: GreetingCardProps) => {
-  const formattedDate = dayjs(state.date).format('dddd, D MMMM YYYY');
+const GreetingCard = ({ user, progress, isLoading }: GreetingCardProps) => {
+  const formattedDate = useMemo(() => dayjs().format('dddd, D MMMM YYYY'), []);
+  const greeting = useMemo(() => {
+    const hour = dayjs().hour();
+    const name = user?.name?.split(' ')[0] ?? 'there';
+    if (hour < 12) return `Good morning, ${name}!`;
+    if (hour < 18) return `Good afternoon, ${name}!`;
+    return `Good evening, ${name}!`;
+  }, [user?.name]);
+
+  const stats = [
+    {
+      label: 'Tasks',
+      value: `${progress.tasks_completed}/${Math.max(progress.tasks_total, progress.tasks_completed)}`,
+    },
+    {
+      label: 'Habits',
+      value: `${progress.habits_completed}/${Math.max(progress.habits_total, progress.habits_completed)}`,
+    },
+    {
+      label: 'Focus score',
+      value: calculateFocusScore(progress),
+    },
+  ];
 
   return (
     <Box
@@ -58,7 +84,7 @@ const GreetingCard = ({ state }: GreetingCardProps) => {
               </Text>
             </HStack>
             <Heading size="xl" fontWeight="semibold">
-              {state.greeting}
+              {isLoading ? <Skeleton height="32px" width="240px" /> : greeting}
             </Heading>
             <HStack fontSize="md" color="whiteAlpha.800">
               <Icon as={FiSun} />
@@ -98,15 +124,15 @@ const GreetingCard = ({ state }: GreetingCardProps) => {
               fontSize="sm"
             >
               <Icon as={FiMap} />
-              <Text noOfLines={1}>{state.user}</Text>
+              <Text noOfLines={1}>{user?.name ?? 'Daily Routine'}</Text>
             </Box>
           </Box>
         </Flex>
 
         <SimpleGrid columns={{ base: 1, sm: 3 }} spacing={4} maxW="xl">
-          <StatCard label="Tasks" value={`${state.progress.tasks_completed}/${state.progress.tasks_total}`} />
-          <StatCard label="Habits" value={`${state.progress.habits_completed}/${state.progress.habits_total}`} />
-          <StatCard label="Focus score" value={calculateFocusScore(state.progress)} />
+          {stats.map((stat) => (
+            <StatCard key={stat.label} label={stat.label} value={isLoading ? undefined : stat.value} />
+          ))}
         </SimpleGrid>
 
         <ButtonGroup size="sm" variant="solid" colorScheme="blackAlpha">
@@ -129,27 +155,21 @@ const GreetingCard = ({ state }: GreetingCardProps) => {
   );
 };
 
-interface StatCardProps {
+type StatCardProps = {
   label: string;
-  value: string;
-}
+  value?: string;
+};
 
 const StatCard = ({ label, value }: StatCardProps) => (
-  <Stack
-    spacing={1}
-    bg="rgba(255, 247, 237, 0.35)"
-    borderRadius="20px"
-    p={4}
-    backdropFilter="blur(10px)"
-  >
+  <Stack spacing={1} bg="rgba(255, 247, 237, 0.35)" borderRadius="20px" p={4} backdropFilter="blur(10px)">
     <Text fontSize="sm" color="whiteAlpha.900" opacity={0.8}>
       {label}
     </Text>
-    <Heading size="lg">{value}</Heading>
+    {value ? <Heading size="lg">{value}</Heading> : <Skeleton height="28px" width="120px" />}
   </Stack>
 );
 
-const calculateFocusScore = (progress: DashboardState['progress']) => {
+const calculateFocusScore = (progress: ProgressSummary) => {
   const total = progress.tasks_total + progress.habits_total;
   if (!total) return '—';
   const score = Math.round(

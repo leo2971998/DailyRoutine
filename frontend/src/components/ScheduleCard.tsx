@@ -1,62 +1,99 @@
-import { Avatar, AvatarGroup, Badge, Box, Stack, Text, VStack, useColorModeValue } from '@chakra-ui/react';
+import {
+  Avatar,
+  AvatarGroup,
+  Badge,
+  Box,
+  Skeleton,
+  Stack,
+  Text,
+  VStack,
+  useColorModeValue,
+} from '@chakra-ui/react';
 import dayjs from 'dayjs';
 import advancedFormat from 'dayjs/plugin/advancedFormat';
 import localizedFormat from 'dayjs/plugin/localizedFormat';
-import { ScheduleEvent } from '../api/types';
+import { useMemo } from 'react';
+import { useSchedule } from '@/hooks/useSchedule';
+import type { ScheduleEvent } from '@/types';
 import CardContainer from './ui/CardContainer';
 
 dayjs.extend(advancedFormat);
 dayjs.extend(localizedFormat);
 
-interface ScheduleCardProps {
-  schedule: ScheduleEvent[];
+type ScheduleCardProps = {
   layout: 'row' | 'column';
-}
+};
 
-const ScheduleCard = ({ schedule, layout }: ScheduleCardProps) => (
-  <CardContainer surface="muted" h="100%">
-    <Stack spacing={4} h="100%" position="relative" zIndex={1}>
-      <Stack spacing={1}>
-        <Text fontSize="lg" fontWeight="semibold" color="text.primary">
-          Upcoming Schedule
-        </Text>
-        <Text fontSize="sm" color="text.secondary">
-          Stay ready for the adventures ahead.
-        </Text>
+const ScheduleCard = ({ layout }: ScheduleCardProps) => {
+  const { data: events = [], isLoading } = useSchedule();
+
+  return (
+    <CardContainer surface="muted" h="100%">
+      <Stack spacing={4} h="100%" position="relative" zIndex={1}>
+        <Stack spacing={1}>
+          <Text fontSize="lg" fontWeight="semibold" color="text.primary">
+            Upcoming Schedule
+          </Text>
+          <Text fontSize="sm" color="text.secondary">
+            Stay ready for the adventures ahead.
+          </Text>
+        </Stack>
+
+        {isLoading ? (
+          <Stack spacing={4}>
+            {Array.from({ length: 3 }).map((_, index) => (
+              <Skeleton key={index} height="180px" borderRadius="22px" />
+            ))}
+          </Stack>
+        ) : events.length === 0 ? (
+          <Box
+            borderRadius="18px"
+            borderWidth="1px"
+            borderColor="border.subtle"
+            p={8}
+            textAlign="center"
+            bg="surface.cardMuted"
+          >
+            <Text fontWeight="semibold" color="text.primary">
+              No events scheduled
+            </Text>
+            <Text fontSize="sm" color="text.secondary">
+              Create schedule events via the API to see them here.
+            </Text>
+          </Box>
+        ) : (
+          <VStack spacing={4} align="stretch">
+            {events.map((event, index) => (
+              <EventCard key={event._id} event={event} layout={layout} index={index} />
+            ))}
+          </VStack>
+        )}
       </Stack>
+      <Box
+        position="absolute"
+        inset={0}
+        opacity={0.16}
+        backgroundImage="radial-gradient(circle at 18% 22%, rgba(249, 115, 22, 0.18), transparent 60%)"
+        pointerEvents="none"
+      />
+    </CardContainer>
+  );
+};
 
-      <VStack spacing={4} align="stretch">
-        {schedule.map((event, index) => (
-          <EventCard key={event.id} event={event} layout={layout} index={index} />
-        ))}
-      </VStack>
-    </Stack>
-    <Box
-      position="absolute"
-      inset={0}
-      opacity={0.16}
-      backgroundImage="radial-gradient(circle at 18% 22%, rgba(249, 115, 22, 0.18), transparent 60%)"
-      pointerEvents="none"
-    />
-  </CardContainer>
-);
-
-interface EventCardProps {
+type EventCardProps = {
   event: ScheduleEvent;
   layout: 'row' | 'column';
   index: number;
-}
+};
 
 const EventCard = ({ event, layout, index }: EventCardProps) => {
   const accent = useColorModeValue('bg.secondary', 'whiteAlpha.100');
   const border = useColorModeValue('border.subtle', 'whiteAlpha.200');
   const date = dayjs(event.start_time).format('ddd, MMM D • h:mm A');
-  const scenicBackground = getScenicBackground(event);
-  const duration = dayjs(event.end_time).diff(dayjs(event.start_time), 'hour');
+  const duration = dayjs(event.end_time).diff(dayjs(event.start_time), 'minute');
   const rotation = index % 2 === 0 ? '-1deg' : '1deg';
-  const badgeColor = event.color_scheme === 'orange' ? 'brand.500' : 'brand.400';
-  const dateColor = useColorModeValue('text.primary', 'text.inverse');
   const eventBodyBg = useColorModeValue('bg.primary', 'whiteAlpha.100');
+  const scenicBackground = useMemo(() => getScenicBackground(index), [index]);
 
   return (
     <Box
@@ -85,7 +122,7 @@ const EventCard = ({ event, layout, index }: EventCardProps) => {
             borderRadius="18px"
             px={3}
             py={1}
-            color={dateColor}
+            color="text.primary"
             fontWeight="semibold"
             fontSize="xs"
             textTransform="uppercase"
@@ -94,25 +131,27 @@ const EventCard = ({ event, layout, index }: EventCardProps) => {
             {date}
           </Box>
           <AvatarGroup max={3} size="sm" position="absolute" bottom={4} left={4} spacing="-0.5rem">
-            {generateCompanions(event.id).map((companion) => (
+            {generateCompanions(event._id).map((companion) => (
               <Avatar key={companion.name} name={companion.name} bg={companion.color} color="white" borderRadius="14px" />
             ))}
           </AvatarGroup>
         </Box>
         <Stack spacing={3} p={5} justify="space-between" bg={eventBodyBg}>
           <Stack spacing={2}>
-            <Badge alignSelf="flex-start" borderRadius="full" px={3} py={1} bg={`${badgeColor}33`} color={badgeColor}>
-              {event.location}
+            <Badge alignSelf="flex-start" borderRadius="full" px={3} py={1} bg="rgba(251, 191, 36, 0.18)" color="brand.500">
+              {dayjs(event.start_time).format('h:mm A')} - {dayjs(event.end_time).format('h:mm A')}
             </Badge>
             <Text fontWeight="semibold" fontSize="lg" color="text.primary">
               {event.title}
             </Text>
-            <Text fontSize="sm" color="text.secondary">
-              Adventure mood: {event.color_scheme === 'orange' ? 'sunny escape' : 'creative retreat'}
-            </Text>
+            {event.description && (
+              <Text fontSize="sm" color="text.secondary">
+                {event.description}
+              </Text>
+            )}
           </Stack>
           <Text fontSize="xs" textTransform="uppercase" color="text.muted" letterSpacing="0.3em">
-            {duration}h journey
+            {Math.max(Math.round(duration / 60), 1)}h session
           </Text>
         </Stack>
       </Stack>
@@ -125,12 +164,12 @@ const generateCompanions = (seed: string) => {
   const names = ['Sol Wanderer', 'Cedar Scout', 'Dawn Storyteller'];
   return names.map((name, index) => ({
     name: `${name.split(' ')[0]} ${seed.slice(0, 2).toUpperCase()}`,
-    color: palette[index % palette.length]
+    color: palette[index % palette.length],
   }));
 };
 
-const getScenicBackground = (event: ScheduleEvent) => {
-  const palette = event.color_scheme === 'orange' ? ['#fb923c', '#fbbf24'] : ['#f59e0b', '#f97316'];
+const getScenicBackground = (index: number) => {
+  const palette = index % 2 === 0 ? ['#fb923c', '#fbbf24'] : ['#f59e0b', '#f97316'];
   const overlay = encodeURIComponent(
     `<svg width="400" height="260" xmlns="http://www.w3.org/2000/svg">
       <defs>

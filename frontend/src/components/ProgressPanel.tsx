@@ -4,24 +4,26 @@ import {
   Divider,
   HStack,
   Icon,
+  Skeleton,
   Stack,
   Stat,
   StatHelpText,
   StatLabel,
   StatNumber,
   Text,
-  useColorModeValue
+  useColorModeValue,
 } from '@chakra-ui/react';
 import { IconType } from 'react-icons';
 import { FiHeart, FiZap } from 'react-icons/fi';
-import { ProgressSnapshot } from '../api/types';
 import CardContainer from './ui/CardContainer';
+import type { ProgressSummary } from '@/types';
 
 interface ProgressPanelProps {
-  progress: ProgressSnapshot;
+  progress: ProgressSummary;
+  isLoading: boolean;
 }
 
-const ProgressPanel = ({ progress }: ProgressPanelProps) => {
+const ProgressPanel = ({ progress, isLoading }: ProgressPanelProps) => {
   const track = useColorModeValue('rgba(253, 224, 71, 0.45)', 'rgba(148, 163, 184, 0.35)');
   const dividerColor = 'border.subtle';
   const completionRate = computeCompletion(progress);
@@ -38,30 +40,34 @@ const ProgressPanel = ({ progress }: ProgressPanelProps) => {
           </Text>
         </Stack>
 
-        <CircularProgress value={completionRate} size="180px" thickness="12px" color="text.accent" trackColor={track}>
-          <CircularProgressLabel>
-            <Stack spacing={1} align="center">
-              <Text fontSize="2xl" fontWeight="semibold" color="text.primary">
-                {completionRate}%
-              </Text>
-              <Text fontSize="sm" color="text.secondary">
-                Completion
-              </Text>
-            </Stack>
-          </CircularProgressLabel>
-        </CircularProgress>
+        {isLoading ? (
+          <Skeleton height="180px" borderRadius="full" />
+        ) : (
+          <CircularProgress value={completionRate} size="180px" thickness="12px" color="text.accent" trackColor={track}>
+            <CircularProgressLabel>
+              <Stack spacing={1} align="center">
+                <Text fontSize="2xl" fontWeight="semibold" color="text.primary">
+                  {completionRate}%
+                </Text>
+                <Text fontSize="sm" color="text.secondary">
+                  Completion
+                </Text>
+              </Stack>
+            </CircularProgressLabel>
+          </CircularProgress>
+        )}
 
         <Stack spacing={4} divider={<Divider borderColor={dividerColor} />}>
           <StatRow
             icon={FiZap}
             label="Checklist"
-            value={`${progress.tasks_completed} / ${progress.tasks_total}`}
+            value={isLoading ? undefined : `${progress.tasks_completed} / ${progress.tasks_total}`}
             delta="+12% vs yesterday"
           />
           <StatRow
             icon={FiHeart}
             label="Habits"
-            value={`${progress.habits_completed} / ${progress.habits_total}`}
+            value={isLoading ? undefined : `${progress.habits_completed} / ${progress.habits_total}`}
             delta="Steady streak"
           />
         </Stack>
@@ -73,7 +79,7 @@ const ProgressPanel = ({ progress }: ProgressPanelProps) => {
 interface StatRowProps {
   icon: IconType;
   label: string;
-  value: string;
+  value?: string;
   delta: string;
 }
 
@@ -91,7 +97,7 @@ const StatRow = ({ icon, label, value, delta }: StatRowProps) => {
             {label}
           </StatLabel>
           <StatNumber fontSize="2xl" color="text.primary">
-            {value}
+            {value ?? <Skeleton height="28px" width="120px" />}
           </StatNumber>
           <StatHelpText color={helpColor}>{delta}</StatHelpText>
         </Stack>
@@ -100,7 +106,7 @@ const StatRow = ({ icon, label, value, delta }: StatRowProps) => {
   );
 };
 
-const computeCompletion = (progress: ProgressSnapshot) => {
+const computeCompletion = (progress: ProgressSummary) => {
   const total = progress.tasks_total + progress.habits_total;
   if (!total) return 0;
   return Math.round(((progress.tasks_completed + progress.habits_completed) / total) * 100);

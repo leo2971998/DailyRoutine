@@ -17,13 +17,15 @@ import {
   Text,
   useColorModeValue
 } from '@chakra-ui/react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { FiCalendar, FiGrid, FiHeart, FiSearch, FiTarget } from 'react-icons/fi';
-import { useDashboard } from './hooks/useDashboard';
-import HabitsTab from './components/tabs/HabitsTab';
 import OverviewTab from './components/tabs/OverviewTab';
+import HabitsTab from './components/tabs/HabitsTab';
 import ScheduleTab from './components/tabs/ScheduleTab';
 import SocialTab from './components/tabs/SocialTab';
+import { useDemoUser } from '@/hooks/useDemoUser';
+import { useTasks } from '@/hooks/useTasks';
+import { useHabits } from '@/hooks/useHabits';
 
 const TABS = [
   { id: 'overview', label: 'Overview', icon: FiGrid },
@@ -33,7 +35,9 @@ const TABS = [
 ] as const;
 
 function App() {
-  const { data, isLoading } = useDashboard();
+  const { data: user, isLoading: isUserLoading } = useDemoUser();
+  const { data: incompleteTasks = [], isLoading: isTasksLoading } = useTasks();
+  const { data: habits = [], isLoading: isHabitsLoading } = useHabits();
   const [activeTab, setActiveTab] = useState(0);
   const loadingBg = useColorModeValue('bg.primary', 'bg.dark');
   const spinnerColor = useColorModeValue('brand.500', 'brand.200');
@@ -63,7 +67,19 @@ function App() {
     }
   );
 
-  if (isLoading || !data) {
+  const isLoading = isUserLoading && !user;
+
+  const initials = useMemo(() => {
+    if (!user?.name) return 'DR';
+    return user.name
+      .split(' ')
+      .map((part) => part[0])
+      .join('')
+      .slice(0, 2)
+      .toUpperCase();
+  }, [user?.name]);
+
+  if (isLoading) {
     return (
       <Flex minH="100vh" align="center" justify="center" bg={loadingBg}>
         <Spinner size="xl" color={spinnerColor} thickness="4px" />
@@ -143,11 +159,7 @@ function App() {
               color="white"
               fontWeight="bold"
             >
-              {data.user
-                .split(' ')
-                .map((name) => name[0])
-                .join('')
-                .slice(0, 2)}
+              {initials}
             </Box>
           </Flex>
 
@@ -185,16 +197,22 @@ function App() {
 
             <TabPanels>
               <TabPanel px={0}>
-                <OverviewTab data={data} />
+                <OverviewTab
+                  user={user}
+                  isTasksLoading={isTasksLoading}
+                  isHabitsLoading={isHabitsLoading}
+                  tasks={incompleteTasks}
+                  habits={habits}
+                />
               </TabPanel>
               <TabPanel px={0}>
-                <HabitsTab data={data} />
+                <HabitsTab />
               </TabPanel>
               <TabPanel px={0}>
-                <ScheduleTab data={data} />
+                <ScheduleTab />
               </TabPanel>
               <TabPanel px={0}>
-                <SocialTab data={data} />
+                <SocialTab />
               </TabPanel>
             </TabPanels>
           </Tabs>

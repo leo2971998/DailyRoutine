@@ -1,69 +1,27 @@
-import { Badge, Box, HStack, Stack, Text, useColorModeValue } from '@chakra-ui/react';
+import {
+  Badge,
+  Box,
+  HStack,
+  Skeleton,
+  Stack,
+  Text,
+  useColorModeValue,
+} from '@chakra-ui/react';
 import dayjs from 'dayjs';
-import { useEffect, useMemo, useState } from 'react';
-import { DailyLogDay, DailyLogEntry, RoutineTask } from '../api/types';
+import { useMemo } from 'react';
+import { useHabits, useHabitLogs } from '@/hooks/useHabits';
+import type { Habit, HabitLog } from '@/types';
 import CardContainer from './ui/CardContainer';
-import DailyLogEntries from './daily-log/DailyLogEntries';
-import LogEntryForm, { MoodOption } from './daily-log/LogEntryForm';
 
-const moodPalette: MoodOption[] = [
-  { id: 'radiant', label: 'Radiant', emoji: '🌞' },
-  { id: 'steady', label: 'Steady', emoji: '🌤️' },
-  { id: 'reflective', label: 'Reflective', emoji: '🌙' }
-];
-
-interface DailyLogCardProps {
-  log: DailyLogDay;
-  checklist: RoutineTask[];
-}
-
-const DailyLogCard = ({ log, checklist }: DailyLogCardProps) => {
-  const [entryText, setEntryText] = useState('');
-  const [selectedMood, setSelectedMood] = useState<string | null>('radiant');
-  const [entries, setEntries] = useState<DailyLogEntry[]>(log.entries);
-  const [expandedEntry, setExpandedEntry] = useState<string | null>(log.entries[0]?.id ?? null);
-  const accentText = useColorModeValue('brand.600', 'brand.200');
+const DailyLogCard = () => {
+  const { data: logs = [], isLoading } = useHabitLogs();
+  const { data: habits = [] } = useHabits();
   const badgeBackground = useColorModeValue('bg.accent', 'whiteAlpha.100');
   const badgeBorder = useColorModeValue('border.subtle', 'whiteAlpha.200');
+  const accentText = useColorModeValue('brand.600', 'brand.200');
 
-  const moodMeta = useMemo(
-    () => moodPalette.find((mood) => mood.id === selectedMood) ?? null,
-    [selectedMood]
-  );
-
-  const taskLookup = useMemo(() => {
-    const pairs = checklist.map((task) => [task.id, task.title] as const);
-    return Object.fromEntries(pairs) as Record<string, string>;
-  }, [checklist]);
-
-  useEffect(() => {
-    setEntries(log.entries);
-    setExpandedEntry(log.entries[0]?.id ?? null);
-  }, [log.entries]);
-
-  const handleAddEntry = () => {
-    const trimmed = entryText.trim();
-    if (!trimmed) {
-      return;
-    }
-
-    const newEntry: DailyLogEntry = {
-      id: `log-${Date.now()}`,
-      timestamp: new Date().toISOString(),
-      content: trimmed,
-      source: 'manual',
-      mood: moodMeta ? { ...moodMeta } : undefined,
-      details: null
-    };
-
-    setEntries((prev) => [newEntry, ...prev]);
-    setEntryText('');
-    setExpandedEntry(newEntry.id);
-  };
-
-  const handleToggleEntry = (entryId: string) => {
-    setExpandedEntry((current) => (current === entryId ? null : entryId));
-  };
+  const habitLookup = useMemo(() => createHabitLookup(habits), [habits]);
+  const entries = useMemo(() => sortLogs(logs), [logs]);
 
   return (
     <CardContainer surface="muted">
@@ -80,35 +38,49 @@ const DailyLogCard = ({ log, checklist }: DailyLogCardProps) => {
               color={accentText}
               fontWeight="semibold"
             >
-              Daily Log
+              Habit Log
             </Badge>
             <Text color={accentText} fontWeight="semibold" fontSize="lg">
-              {dayjs(log.date).format('dddd, MMM D')}
+              {dayjs().format('dddd, MMM D')}
             </Text>
             <Badge colorScheme="orange" borderRadius="full" px={3} py={1} fontSize="0.7rem">
-              {entries.length} moments today
+              {entries.length} entries
             </Badge>
           </HStack>
           <Text color="text.secondary" maxW="3xl">
-            {log.focus}
+            A quick view of your recent habit updates.
           </Text>
         </Stack>
 
-        <LogEntryForm
-          entryText={entryText}
-          onEntryChange={setEntryText}
-          onSubmit={handleAddEntry}
-          moodOptions={moodPalette}
-          selectedMood={selectedMood}
-          onSelectMood={setSelectedMood}
-        />
-
-        <DailyLogEntries
-          entries={entries}
-          expandedEntry={expandedEntry}
-          onToggle={handleToggleEntry}
-          taskLookup={taskLookup}
-        />
+        {isLoading ? (
+          <Stack spacing={4}>
+            {Array.from({ length: 3 }).map((_, index) => (
+              <Skeleton key={index} height="64px" borderRadius="16px" />
+            ))}
+          </Stack>
+        ) : entries.length === 0 ? (
+          <Box
+            borderRadius="16px"
+            borderWidth="1px"
+            borderColor="border.subtle"
+            p={6}
+            textAlign="center"
+            bg="surface.cardMuted"
+          >
+            <Text fontWeight="semibold" color="text.primary">
+              No habit logs yet
+            </Text>
+            <Text fontSize="sm" color="text.secondary">
+              Log a habit to see it appear here.
+            </Text>
+          </Box>
+        ) : (
+          <Stack spacing={3}>
+            {entries.map((entry) => (
+              <LogRow key={entry._id} entry={entry} habitLookup={habitLookup} />
+            ))}
+          </Stack>
+        )}
       </Stack>
       <Box
         position="absolute"
@@ -119,6 +91,58 @@ const DailyLogCard = ({ log, checklist }: DailyLogCardProps) => {
       />
     </CardContainer>
   );
+};
+
+type LogRowProps = {
+  entry: HabitLog;
+  habitLookup: Record<string, Habit>;
+};
+
+const LogRow = ({ entry, habitLookup }: LogRowProps) => {
+  const habit = habitLookup[entry.habit_id];
+  const bg = useColorModeValue('surface.cardMuted', 'whiteAlpha.100');
+  const border = useColorModeValue('border.subtle', 'whiteAlpha.200');
+  const statusColor = entry.status === 'completed' ? 'green' : 'red';
+
+  return (
+    <HStack
+      spacing={4}
+      p={4}
+      borderRadius="16px"
+      bg={bg}
+      borderWidth="1px"
+      borderColor={border}
+      align="flex-start"
+    >
+      <Stack spacing={1} flex={1}>
+        <HStack justify="space-between">
+          <Text fontWeight="semibold" color="text.primary">
+            {habit?.name ?? 'Habit'}
+          </Text>
+          <Badge colorScheme={statusColor}>{entry.status}</Badge>
+        </HStack>
+        <Text fontSize="sm" color="text.secondary">
+          {dayjs(entry.date).format('MMM D, h:mm A')}
+        </Text>
+        {entry.completed_repetitions > 1 && (
+          <Text fontSize="xs" color="text.muted">
+            {entry.completed_repetitions} repetitions
+          </Text>
+        )}
+      </Stack>
+    </HStack>
+  );
+};
+
+const createHabitLookup = (habits: Habit[]) => {
+  return habits.reduce<Record<string, Habit>>((acc, habit) => {
+    acc[habit._id] = habit;
+    return acc;
+  }, {});
+};
+
+const sortLogs = (logs: HabitLog[]) => {
+  return [...logs].sort((a, b) => dayjs(b.date).valueOf() - dayjs(a.date).valueOf());
 };
 
 export default DailyLogCard;
