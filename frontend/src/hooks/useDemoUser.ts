@@ -7,7 +7,7 @@ export function useDemoUser(userId = env.DEMO_USER_ID) {
   return useQuery({
     queryKey: ['users', userId],
     queryFn: async () => {
-      const { data } = await api.get<User>(`/v1/users/${userId}`);
+      const { data } = await api.get<User>(`/users/${userId}`);
       return data;
     },
   });
