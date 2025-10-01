@@ -13,3 +13,4 @@ __pycache__
 /.idea
 /backend/venv
 frontend/package-lock.json
+/api/venv
