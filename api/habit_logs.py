@@ -1,49 +1,70 @@
-# habit_logs.py
+from __future__ import annotations
+
 from datetime import datetime
-from fastapi import APIRouter, HTTPException, Query
+from typing import Optional
+
 from bson import ObjectId
-from api.app.db import get_db
-from api.app.schemas.habit_log import HabitLog, HabitLogCreate
-from api.app.schemas.common import ListResponse
+from fastapi import APIRouter, HTTPException, Query
+
+if __package__:
+    from .app.db import get_db
+    from .app.schemas.common import ListResponse
+    from .app.schemas.habit_log import HabitLog, HabitLogCreate
+else:  # pragma: no cover - handles ``uvicorn main:app`` when cwd==api/
+    from app.db import get_db
+    from app.schemas.common import ListResponse
+    from app.schemas.habit_log import HabitLog, HabitLogCreate
 
 router = APIRouter(prefix="/v1/habit-logs", tags=["habit_logs"])
 
 
+def _parse_object_id(value: str, field: str) -> ObjectId:
+    if not ObjectId.is_valid(value):
+        raise HTTPException(status_code=400, detail=f"Invalid {field}")
+    return ObjectId(value)
+
+
 @router.post("", response_model=HabitLog, status_code=201)
-async def create_habit_log(payload: HabitLogCreate):
+async def create_habit_log(payload: HabitLogCreate) -> HabitLog:
     db = get_db()
-    habit = db.habits.find_one({"_id": ObjectId(payload.habit_id), "user_id": payload.user_id})
+    habits = db.habits
+    logs = db.habit_logs
+
+    habit = await habits.find_one({"_id": payload.habit_id, "user_id": payload.user_id})
     if not habit:
         raise HTTPException(status_code=404, detail="Habit not found")
-    log_doc = {
-        "habit_id": ObjectId(payload.habit_id),
-        "user_id": payload.user_id,
-        "date": payload.date or datetime.utcnow().date().isoformat(),
-        "value": payload.value,
-        "note": payload.note or "",
-        "created_at": datetime.utcnow(),
-        "updated_at": datetime.utcnow(),
-    }
-    inserted = db.habit_logs.insert_one(log_doc)
-    saved = db.habit_logs.find_one({"_id": inserted.inserted_id})
-    return HabitLog.model_validate({**saved, "habit_id": str(saved["habit_id"]), "_id": str(saved["_id"])})
+
+    now = datetime.utcnow()
+    doc = payload.model_dump(exclude_none=True)
+    doc.setdefault("date", now)
+    doc.update({"created_at": now, "updated_at": now})
+
+    res = await logs.insert_one(doc)
+    saved = await logs.find_one({"_id": res.inserted_id})
+    assert saved is not None
+    return HabitLog.model_validate(saved)
 
 
 @router.get("", response_model=ListResponse[HabitLog])
 async def list_habit_logs(
-        user_id: str = Query(..., description="User ID"),
-        habit_id: str | None = Query(None, description="Filter by habit"),
-        date: str | None = Query(None, description="Filter by date (YYYY-MM-DD)"),
-):
+    user_id: str = Query(..., description="User ID"),
+    habit_id: Optional[str] = Query(None, description="Filter by habit"),
+    date: Optional[str] = Query(None, description="Filter by ISO date"),
+) -> ListResponse[HabitLog]:
     db = get_db()
-    query: dict = {"user_id": user_id}
-    if habit_id:
-        query["habit_id"] = ObjectId(habit_id)
-    if date:
-        query["date"] = date
+    logs = db.habit_logs
 
-    cursor = db.habit_logs.find(query).sort("date", -1)
+    query: dict[str, object] = {"user_id": _parse_object_id(user_id, "user_id")}
+    if habit_id:
+        query["habit_id"] = _parse_object_id(habit_id, "habit_id")
+    if date:
+        try:
+            query["date"] = datetime.fromisoformat(date)
+        except ValueError as exc:  # pragma: no cover - defensive guard
+            raise HTTPException(status_code=400, detail="Invalid date format") from exc
+
+    cursor = logs.find(query).sort("date", -1)
     items: list[HabitLog] = []
     async for doc in cursor:
-        items.append(HabitLog.model_validate({**doc, "_id": str(doc["_id"]), "habit_id": str(doc["habit_id"])}))
-    return {"items": items, "total": len(items)}
+        items.append(HabitLog.model_validate(doc))
+    return ListResponse[HabitLog](items=items, total=len(items))
