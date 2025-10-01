@@ -1,47 +1,47 @@
-# DailyRoutine/main.py  (run from repo root: uvicorn main:app --reload --port 8000)
+from __future__ import annotations
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+# Import routers from the flat api package (NOT from api.app.*)
+from .users import router as users_router
+from .tasks import router as tasks_router
+from .habits import router as habits_router
+from .habit_logs import router as habit_logs_router
+from .schedule import router as schedule_router
+from .health import router as health_router
 
-def create_app() -> FastAPI:
-    app = FastAPI(title="DailyRoutine API", version="0.1.0")
 
-    # CORS for local dev (adjust origins if needed)
+def make_app() -> FastAPI:
+    app = FastAPI(
+        title="DailyRoutine API",
+        version="1.0.0",
+        docs_url="/v1/docs",
+        redoc_url="/v1/redoc",
+        openapi_url="/v1/openapi.json",
+    )
+
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=[
-            "http://localhost:5173",
-            "http://127.0.0.1:5173",
-            "http://localhost:3000",
-            "http://127.0.0.1:3000",
-            "*",  # remove this in prod
-        ],
+        allow_origins=["*"],
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
     )
 
-    # Import and mount routers
-    # Expecting: api/app/routers/{users,tasks,habits,habit_logs,schedule,health}.py
-    from api.app.routers import users, tasks, habits, habit_logs, schedule, health
+    # Mount routers
+    app.include_router(users_router)
+    app.include_router(tasks_router)
+    app.include_router(habits_router)
+    app.include_router(habit_logs_router)
+    app.include_router(schedule_router)
+    app.include_router(health_router)
 
-    app.include_router(users.router)
-    app.include_router(tasks.router)
-    app.include_router(habits.router)
-    app.include_router(habit_logs.router)
-    app.include_router(schedule.router)
-    app.include_router(health.router)
-
-    @app.get("/healthz")
-    async def healthz():
-        return {"status": "ok"}
+    @app.get("/v1/healthcheck")
+    def healthcheck():
+        return {"ok": True}
 
     return app
 
 
-app = create_app()
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
+app = make_app()

@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 from typing import Optional, List
 from bson import ObjectId
-from ..db import get_db
+from api.app.db import get_db
 
 router = APIRouter(prefix="/v1/tasks", tags=["tasks"])
 

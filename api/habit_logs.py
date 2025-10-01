@@ -2,9 +2,9 @@
 from datetime import datetime
 from fastapi import APIRouter, HTTPException, Query
 from bson import ObjectId
-from ..db import get_db
-from ..schemas.habit_log import HabitLog, HabitLogCreate
-from ..schemas.common import ListResponse
+from api.app.db import get_db
+from api.app.schemas.habit_log import HabitLog, HabitLogCreate
+from api.app.schemas.common import ListResponse
 
 router = APIRouter(prefix="/v1/habit-logs", tags=["habit_logs"])
 
