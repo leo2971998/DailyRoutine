@@ -1,19 +1,14 @@
 import { Grid, GridItem } from '@chakra-ui/react';
-import DailyLogCard from '../DailyLogCard';
 import HabitBoard from '../HabitBoard';
-import { DashboardState } from '../../api/types';
+import DailyLogCard from '../DailyLogCard';
 
-interface HabitsTabProps {
-  data: DashboardState;
-}
-
-const HabitsTab = ({ data }: HabitsTabProps) => (
+const HabitsTab = () => (
   <Grid templateColumns={{ base: '1fr', xl: 'repeat(3, 1fr)' }} gap={{ base: 6, xl: 8 }}>
     <GridItem colSpan={{ base: 1, xl: 2 }}>
-      <HabitBoard habits={data.habits} />
+      <HabitBoard />
     </GridItem>
     <GridItem>
-      <DailyLogCard log={data.daily_log} checklist={data.checklist} />
+      <DailyLogCard />
     </GridItem>
   </Grid>
 );
