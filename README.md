@@ -57,6 +57,9 @@ An interactive daily routine tracker inspired by the Fitplan dashboard aesthetic
    echo "VITE_DEMO_USER_ID=your-demo-user-id" >> .env
    ```
 
+   > The frontend automatically appends `/v1` to the configured API URL, so point
+   > `VITE_API_URL` to the root of your FastAPI server.
+
 3. Start the Vite dev server:
    ```bash
    npm run dev
