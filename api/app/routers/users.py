@@ -1,37 +1,48 @@
+# users.py
 from datetime import datetime
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, Field
 from bson import ObjectId
 from ..db import get_db
-from ..schemas.user import User, UserCreate, UserPublic
-from ..schemas.common import ListResponse
 
 router = APIRouter(prefix="/v1/users", tags=["users"])
 
 
-@router.post("", response_model=UserPublic, status_code=201)
+class User(BaseModel):
+    id: str = Field(alias="_id")
+    name: str
+    email: str
+    created_at: datetime
+    updated_at: datetime
+
+
+class UserCreate(BaseModel):
+    name: str
+    email: str
+
+
+@router.post("", response_model=User, status_code=201)
 async def create_user(payload: UserCreate):
     db = get_db()
-    if await db.users.find_one({"email": payload.email}):
-        raise HTTPException(status_code=409, detail="Email already exists")
-    doc = payload.model_dump()
-    doc["created_at"] = datetime.utcnow()
-    res = await db.users.insert_one(doc)
-    created = await db.users.find_one({"_id": res.inserted_id})
-    return created
+    # unique by email
+    existing = db.users.find_one({"email": payload.email})
+    if existing:
+        raise HTTPException(status_code=409, detail="User already exists")
+    doc = {
+        "name": payload.name,
+        "email": payload.email,
+        "created_at": datetime.utcnow(),
+        "updated_at": datetime.utcnow(),
+    }
+    res = db.users.insert_one(doc)
+    saved = db.users.find_one({"_id": res.inserted_id})
+    return User.model_validate({**saved, "_id": str(saved["_id"])})
 
 
 @router.get("/{user_id}", response_model=User)
 async def get_user(user_id: str):
     db = get_db()
-    doc = await db.users.find_one({"_id": ObjectId(user_id)})
-    if not doc:
+    user = db.users.find_one({"_id": ObjectId(user_id)})
+    if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    return doc
-
-
-@router.get("", response_model=ListResponse)
-async def list_users(skip: int = Query(0, ge=0), limit: int = Query(50, ge=1, le=200)):
-    db = get_db()
-    total = await db.users.count_documents({})
-    items = [u async for u in db.users.find().skip(skip).limit(limit)]
-    return {"total": total, "items": items}
+    return User.model_validate({**user, "_id": str(user["_id"])})

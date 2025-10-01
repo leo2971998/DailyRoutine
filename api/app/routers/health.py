@@ -1,13 +1,9 @@
+# health.py
 from fastapi import APIRouter
 
-router = APIRouter(prefix="/health", tags=["health"])
+router = APIRouter(prefix="/v1/health", tags=["health"])
 
 
-@router.get("/live")
-async def live():
-    return {"status": "ok"}
-
-
-@router.get("/ready")
-async def ready():
-    return {"status": "ready"}
+@router.get("")
+async def health():
+    return {"ok": True}

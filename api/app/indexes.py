@@ -1,22 +1,22 @@
-from pymongo import ASCENDING, DESCENDING
+from pymongo import ASCENDING
 from .db import get_db
-
 
 async def ensure_indexes() -> None:
     db = get_db()
+
     await db.users.create_index([("email", ASCENDING)], unique=True)
 
-    await db.tasks.create_indexes([
-        # lookups by user and status; due_date for queries/sorts
-        (await db.tasks.create_index([("user_id", ASCENDING), ("is_completed", ASCENDING), ("due_date", ASCENDING)]))
-    ])
+    # tasks: query by user, completion, and sort/filter by due_date
+    await db.tasks.create_index([("user_id", ASCENDING), ("is_completed", ASCENDING), ("due_date", ASCENDING)])
 
-    await db.habits.create_index([("user_id", ASCENDING), ("name", ASCENDING)], unique=False)
+    # habits: list by user + name
+    await db.habits.create_index([("user_id", ASCENDING), ("name", ASCENDING)])
 
-    # prevent duplicate same-day logs for same habit/user
+    # habit_logs: prevent duplicate logs per (user, habit, date)
     await db.habit_logs.create_index(
         [("user_id", ASCENDING), ("habit_id", ASCENDING), ("date", ASCENDING)],
-        unique=True
+        unique=True,
     )
 
+    # schedule_events: list by user + start time
     await db.schedule_events.create_index([("user_id", ASCENDING), ("start_time", ASCENDING)])
