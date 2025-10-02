@@ -34,6 +34,10 @@ async def ensure_indexes() -> None:
 
         # schedule_events: list by user + start time
         await db.schedule_events.create_index([("user_id", ASCENDING), ("start_time", ASCENDING)])
+
+        # insights cache: expire old entries and allow hash lookups
+        await db.insights.create_index([("ts", ASCENDING)], expireAfterSeconds=60 * 60 * 24 * 90)
+        await db.insights.create_index([("facts_hash", ASCENDING)])
     except _CONNECTION_ERRORS as exc:
         _logger.warning("Skipping MongoDB index creation because the database is unreachable: %s", exc)
     except PyMongoError:
