@@ -275,7 +275,7 @@ async def build_monthly_facts(
             "created": created_count,
             "completed": completed_count,
             "open": open_count,
-            "completions_by_weekday": dict(weekday_counter),
+            "completions_by_weekday": {str(k): v for k, v in dict(weekday_counter).items()},
         },
         "habits": {
             "total_logs": len(habit_log_docs),
@@ -284,8 +284,8 @@ async def build_monthly_facts(
         },
         "schedule": {
             "events": len(schedule_docs),
-            "events_by_weekday": dict(schedule_weekdays),
-            "events_by_hour": dict(schedule_hours),
+            "events_by_weekday": {str(k): v for k, v in dict(schedule_weekdays).items()},
+            "events_by_hour": {str(k): v for k, v in dict(schedule_hours).items()},
         },
     }
 

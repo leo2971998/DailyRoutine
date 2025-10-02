@@ -92,15 +92,13 @@ async def generate_insight(facts: Mapping[str, Any], mode: Literal["daily", "mon
         logger.exception("Failed to initialise Gemini model")
         raise GeminiConfigurationError("Unable to initialise Gemini model") from exc
 
+    # Combine system prompt with user message since Gemini doesn't support system role
+    combined_prompt = f"{_SYSTEM_PROMPT}\n\n{_task_for_mode(mode)}\n\nFACTS:\n{_serialize_facts(facts)}"
+    
     payload = [
-        {"role": "system", "parts": [{"text": _SYSTEM_PROMPT}]},
         {
             "role": "user",
-            "parts": [
-                {"text": _task_for_mode(mode)},
-                {"text": "FACTS:"},
-                {"text": _serialize_facts(facts)},
-            ],
+            "parts": [{"text": combined_prompt}],
         },
     ]
 

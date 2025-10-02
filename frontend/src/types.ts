@@ -59,3 +59,28 @@ export type ProgressSummary = {
   habits_completed: number;
   habits_total: number;
 };
+
+export type DailyInsight = {
+  speech: string;
+  bullets: string[];
+};
+
+export type MonthlyInsight = {
+  summary: string;
+  bullets: string[];
+  recommendations: string[];
+};
+
+export type AlexaCommand = {
+  speech: string;
+  intent: string;
+  slots: Record<string, string>;
+  timestamp: string;
+};
+
+export type AlexaTestResult = {
+  command: string;
+  response: AlexaCommand;
+  success: boolean;
+  error?: string;
+};

@@ -1,0 +1,46 @@
+{
+  "skillManifest": {
+    "apis": {
+      "custom": {
+        "endpoint": {
+          "uri": "YOUR_LAMBDA_FUNCTION_ARN_HERE"
+        }
+      }
+    },
+    "manifestVersion": "1.0",
+    "publishingInformation": {
+      "locales": {
+        "en-US": {
+          "name": "Daily Routine",
+          "summary": "Manage your daily tasks, habits, and schedule with voice commands",
+          "description": "Daily Routine helps you manage your productivity with voice commands. You can add tasks, log habits, check your schedule, and get daily briefings. Just say 'Alexa, open daily routine' to get started.",
+          "keywords": [
+            "productivity",
+            "tasks",
+            "habits",
+            "schedule",
+            "routine"
+          ],
+          "smallIconUri": "https://example.com/small-icon.png",
+          "largeIconUri": "https://example.com/large-icon.png"
+        }
+      },
+      "isAvailableWorldwide": true,
+      "testingInstructions": "This skill allows users to manage their daily routine with voice commands. Test by saying 'Alexa, open daily routine' and then try commands like 'add task review project proposal' or 'daily briefing'.",
+      "category": "PRODUCTIVITY",
+      "distributionCountries": []
+    },
+    "privacyAndCompliance": {
+      "allowsPurchases": false,
+      "usesPersonalInfo": false,
+      "isChildDirected": false,
+      "isExportCompliant": true,
+      "containsAds": false,
+      "locales": {
+        "en-US": {
+          "privacyPolicyUrl": "https://example.com/privacy-policy"
+        }
+      }
+    }
+  }
+}
