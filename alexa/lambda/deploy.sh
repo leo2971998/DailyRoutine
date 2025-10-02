@@ -6,7 +6,7 @@
 set -e
 
 FUNCTION_NAME="daily-routine-alexa"
-RUNTIME="python3.9"
+RUNTIME="python3.11"
 HANDLER="handler.lambda_handler"
 ROLE_ARN="arn:aws:iam::YOUR_ACCOUNT_ID:role/lambda-execution-role"
 

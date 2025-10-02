@@ -3,7 +3,7 @@
 
 param(
     [string]$FunctionName = "daily-routine-alexa",
-    [string]$Runtime = "python3.9",
+    [string]$Runtime = "python3.11",
     [string]$Handler = "handler.lambda_handler",
     [string]$RoleArn = "arn:aws:iam::YOUR_ACCOUNT_ID:role/lambda-execution-role"
 )
