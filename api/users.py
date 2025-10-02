@@ -52,8 +52,14 @@ async def get_user(user_id: str) -> User:
     db = get_db()
     users = db.users
 
-    oid = _parse_object_id(user_id, "user_id")
-    user = await users.find_one({"_id": oid})
+    # 1) Try string _id (your current DB has _id stored as a string)
+    user = await users.find_one({"_id": user_id})
+
+    # 2) Fall back to ObjectId if not found and the id looks valid
+    if not user and ObjectId.is_valid(user_id):
+        user = await users.find_one({"_id": ObjectId(user_id)})
+
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+
     return User.model_validate(user)
