@@ -1,0 +1,28 @@
+{
+  "version": "1.0",
+  "session": {
+    "new": false,
+    "sessionId": "SessionId.sched_list",
+    "application": { "applicationId": "amzn1.ask.skill.test" },
+    "attributes": {},
+    "user": { "userId": "amzn1.ask.account.test" }
+  },
+  "context": {},
+  "request": {
+    "type": "IntentRequest",
+    "requestId": "EdwRequestId.sched_list",
+    "timestamp": "2024-01-01T00:00:05Z",
+    "locale": "en-US",
+    "intent": {
+      "name": "ScheduleIntent",
+      "confirmationStatus": "NONE",
+      "slots": {
+        "freeText": {
+          "name": "freeText",
+          "value": "what's my schedule",
+          "confirmationStatus": "NONE"
+        }
+      }
+    }
+  }
+}

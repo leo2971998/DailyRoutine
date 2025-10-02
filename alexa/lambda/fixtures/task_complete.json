@@ -1,0 +1,28 @@
+{
+  "version": "1.0",
+  "session": {
+    "new": false,
+    "sessionId": "SessionId.task_complete",
+    "application": { "applicationId": "amzn1.ask.skill.test" },
+    "attributes": {},
+    "user": { "userId": "amzn1.ask.account.test" }
+  },
+  "context": {},
+  "request": {
+    "type": "IntentRequest",
+    "requestId": "EdwRequestId.task_complete",
+    "timestamp": "2024-01-01T00:00:01Z",
+    "locale": "en-US",
+    "intent": {
+      "name": "TaskIntent",
+      "confirmationStatus": "NONE",
+      "slots": {
+        "freeText": {
+          "name": "freeText",
+          "value": "complete task buy milk",
+          "confirmationStatus": "NONE"
+        }
+      }
+    }
+  }
+}

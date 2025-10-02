@@ -11,7 +11,9 @@ if __package__:
     from .habit_logs import router as habit_logs_router
     from .habits import router as habits_router
     from .health import router as health_router
+    from .schedule import alias_router as schedule_alias_router
     from .schedule import router as schedule_router
+    from .summary import router as summary_router
     from .tasks import router as tasks_router
     from .users import router as users_router
 else:  # pragma: no cover - handles ``uvicorn main:app`` when cwd==api/
@@ -22,7 +24,9 @@ else:  # pragma: no cover - handles ``uvicorn main:app`` when cwd==api/
     from habit_logs import router as habit_logs_router
     from habits import router as habits_router
     from health import router as health_router
+    from schedule import alias_router as schedule_alias_router
     from schedule import router as schedule_router
+    from summary import router as summary_router
     from tasks import router as tasks_router
     from users import router as users_router
 
@@ -51,6 +55,8 @@ def make_app() -> FastAPI:
         habit_logs_router,
         habit_logs_alias_router,
         schedule_router,
+        schedule_alias_router,
+        summary_router,
         health_router,
     ]
 
