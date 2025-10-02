@@ -45,6 +45,9 @@ API_CORS_ORIGINS: list[str] = [
     if o.strip()
 ]
 
+GEMINI_API_KEY: str | None = os.getenv("GEMINI_API_KEY")
+GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+
 
 def _parse_alias_map(raw: str) -> Dict[str, str]:
     mapping: Dict[str, str] = {}
