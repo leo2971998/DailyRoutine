@@ -116,6 +116,7 @@ The frontend opens a WebSocket connection at `ws://localhost:8000/ws/dashboard`.
 - `GET /v1/tasks` - List tasks (supports filtering by user_id, is_completed)
 - `POST /v1/tasks` - Create a new task
 - `PATCH /v1/tasks/{task_id}` - Update a task
+- `PATCH /v1/tasks/complete-by-name` - Mark a task complete by providing a description fragment
 - `DELETE /v1/tasks/{task_id}` - Delete a task
 
 ### Habits
@@ -129,11 +130,45 @@ The frontend opens a WebSocket connection at `ws://localhost:8000/ws/dashboard`.
 - `POST /v1/habit-logs` - Log a habit completion
 
 ### Schedule
-- `GET /v1/schedule` - Get scheduled items
+- `GET /v1/schedule` - Get today's scheduled items
+- `POST /v1/schedule` - Create a simple scheduled item (summary, optional times/location)
+- `GET /v1/schedule-events` - List all schedule events with advanced filtering
+- `POST /v1/schedule-events` - Create a detailed schedule event (existing schema)
+
+### Summary
+- `GET /v1/summary` - Return a synthesized daily briefing with counts used by the Alexa skill
+
+## Alexa Skill Integration
+
+The repository ships with an Alexa Custom Skill implementation under `alexa/` to provide
+hands-free access to tasks, habits, schedules, and a daily briefing.
+
+1. **Interaction model** – Import `alexa/interaction-model/en-US.json` into the Alexa
+   Developer Console (Build → Interaction Model → JSON Editor).
+2. **Lambda handler** – Package the contents of `alexa/lambda/` (including the vendored
+   `ask-sdk-core` dependency) and deploy to an AWS Lambda function running Python 3.11.
+   Set the Lambda environment variables:
+   - `API_BASE` – Base URL of your FastAPI deployment (e.g., `https://api.example.com`).
+   - `FIXED_USER_ID` – Demo user alias or ObjectId (defaults to `wendy`).
+   - `HTTP_TIMEOUT` – Optional HTTP timeout in seconds (defaults to `6.0`).
+3. **Local fixtures** – Run `python alexa/lambda/local_test.py` to simulate Alexa requests
+   offline. The script loads each fixture in `alexa/lambda/fixtures/`, mocks the HTTP
+   calls, and asserts that the spoken response contains an expected phrase.
+4. **Skill setup** – In the Alexa Developer Console configure the endpoint to point to the
+   Lambda ARN, enable testing for your account, and use phrases such as “daily briefing”
+   or “add task buy milk.”
+
+The Lambda handler performs deterministic parsing for the new intents:
+- `TaskIntent` – “add task …”, “complete task …”, or fallback to list open tasks.
+- `HabitIntent` – “log habit …” to create a log or “check habit streak” to count logs.
+- `ScheduleIntent` – “add event …” to POST a schedule item or fallback to list today’s
+  events.
+- `SummaryIntent` – Fetches `/v1/summary` and speaks the returned `speech` field.
 
 ## Testing
 - `python -m compileall api/` ensures the backend modules compile successfully
-- Frontend build commands require npm registry access which may be restricted in some environments
+- `pytest` runs the new backend unit tests for the summary, schedule, and task helpers (install `pytest` and `anyio` in your virtualenv if they are not already present)
+- `python alexa/lambda/local_test.py` verifies Alexa fixtures without hitting the live API
 
 ## Project Structure
 ```

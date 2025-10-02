@@ -12,6 +12,8 @@ class ScheduleEvent(MongoModel):
     start_time: datetime
     end_time: datetime
     description: Optional[str] = None
+    location: Optional[str] = None
+    summary: Optional[str] = None
 
     @classmethod
     def from_mongo(cls, doc: dict) -> "ScheduleEvent":
@@ -38,3 +40,5 @@ class ScheduleEventCreate(MongoModel):
     start_time: datetime
     end_time: datetime
     description: Optional[str] = None
+    location: Optional[str] = None
+    summary: Optional[str] = None

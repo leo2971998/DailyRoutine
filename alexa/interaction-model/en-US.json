@@ -1,0 +1,49 @@
+{
+  "interactionModel": {
+    "languageModel": {
+      "invocationName": "daily routine",
+      "intents": [
+        { "name": "AMAZON.HelpIntent", "samples": [] },
+        { "name": "AMAZON.StopIntent", "samples": [] },
+        { "name": "AMAZON.CancelIntent", "samples": [] },
+        {
+          "name": "TaskIntent",
+          "slots": [{ "name": "freeText", "type": "AMAZON.SearchQuery" }],
+          "samples": [
+            "add task {freeText}",
+            "complete task {freeText}",
+            "list my tasks",
+            "what tasks do I have"
+          ]
+        },
+        {
+          "name": "HabitIntent",
+          "slots": [{ "name": "freeText", "type": "AMAZON.SearchQuery" }],
+          "samples": [
+            "log habit {freeText}",
+            "check habit streak",
+            "how is my habit streak"
+          ]
+        },
+        {
+          "name": "ScheduleIntent",
+          "slots": [{ "name": "freeText", "type": "AMAZON.SearchQuery" }],
+          "samples": [
+            "what's my schedule",
+            "what do I have today",
+            "add event {freeText}"
+          ]
+        },
+        {
+          "name": "SummaryIntent",
+          "samples": [
+            "daily briefing",
+            "how am I doing",
+            "give me my daily summary"
+          ]
+        }
+      ],
+      "types": []
+    }
+  }
+}

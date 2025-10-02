@@ -1,0 +1,21 @@
+{
+  "version": "1.0",
+  "session": {
+    "new": false,
+    "sessionId": "SessionId.summary",
+    "application": { "applicationId": "amzn1.ask.skill.test" },
+    "attributes": {},
+    "user": { "userId": "amzn1.ask.account.test" }
+  },
+  "context": {},
+  "request": {
+    "type": "IntentRequest",
+    "requestId": "EdwRequestId.summary",
+    "timestamp": "2024-01-01T00:00:07Z",
+    "locale": "en-US",
+    "intent": {
+      "name": "SummaryIntent",
+      "confirmationStatus": "NONE"
+    }
+  }
+}
