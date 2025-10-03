@@ -10,13 +10,21 @@ from pydantic import BaseModel, Field
 if __package__:
     from .app.db import get_db
     from .app.schemas.common import ListResponse
-    from .app.schemas.schedule_event import ScheduleEvent, ScheduleEventCreate
+    from .app.schemas.schedule_event import (
+        ScheduleEvent,
+        ScheduleEventCreate,
+        ScheduleEventUpdate,
+    )
     from .app.utils.broadcast import broadcast_event
     from .app.utils.object_ids import resolve_object_id
 else:  # pragma: no cover - handles ``uvicorn main:app`` when cwd==api/
     from app.db import get_db
     from app.schemas.common import ListResponse
-    from app.schemas.schedule_event import ScheduleEvent, ScheduleEventCreate
+    from app.schemas.schedule_event import (
+        ScheduleEvent,
+        ScheduleEventCreate,
+        ScheduleEventUpdate,
+    )
     from app.utils.broadcast import broadcast_event
     from app.utils.object_ids import resolve_object_id
 
@@ -162,6 +170,32 @@ async def delete_event(event_id: str) -> None:
     res = await events.delete_one({"_id": oid})
     if res.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Event not found")
+
+
+@router.patch("/{event_id}", response_model=ScheduleEvent)
+async def update_event(event_id: str, payload: ScheduleEventUpdate) -> ScheduleEvent:
+    db = get_db()
+    events = db.schedule_events
+
+    oid = _parse_object_id(event_id, "event_id")
+    update_data = payload.model_dump(exclude_none=True, exclude_unset=True)
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No fields to update")
+
+    if "start_time" in update_data:
+        update_data["start_time"] = _normalize_datetime(update_data["start_time"])
+    if "end_time" in update_data:
+        update_data["end_time"] = _normalize_datetime(update_data["end_time"])
+
+    update_data["updated_at"] = datetime.utcnow()
+    res = await events.update_one({"_id": oid}, {"$set": update_data})
+    if res.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Event not found")
+
+    saved = await events.find_one({"_id": oid})
+    if not saved:
+        raise HTTPException(status_code=404, detail="Event not found")
+    return ScheduleEvent.from_mongo(saved)
 
 
 __all__ = ["router", "alias_router"]
