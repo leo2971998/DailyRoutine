@@ -28,6 +28,7 @@ import AlexaTab from './components/tabs/AlexaTab';
 import { useDemoUser } from '@/hooks/useDemoUser';
 import { useTasks } from '@/hooks/useTasks';
 import { useHabits } from '@/hooks/useHabits';
+import { env } from '@/lib/env';
 
 const TABS = [
   { id: 'overview', label: 'Overview', icon: FiGrid },
@@ -72,6 +73,7 @@ function App() {
   );
 
   const isLoading = isUserLoading && !user;
+  const activeUserId = user?._id ?? env.DEMO_USER_ID;
 
   const initials = useMemo(() => {
     if (!user?.name) return 'DR';
@@ -213,7 +215,11 @@ function App() {
                 <HabitsTab />
               </TabPanel>
               <TabPanel px={0}>
-                <ScheduleTab />
+                <ScheduleTab
+                  tasks={incompleteTasks}
+                  isTasksLoading={isTasksLoading}
+                  userId={activeUserId}
+                />
               </TabPanel>
               <TabPanel px={0}>
                 <InsightsTab />

@@ -28,10 +28,11 @@ dayjs.extend(localizedFormat);
 
 type ScheduleCardProps = {
   layout: 'row' | 'column';
+  userId?: string;
 };
 
-const ScheduleCard = ({ layout }: ScheduleCardProps) => {
-  const { data: events = [], isLoading } = useSchedule();
+const ScheduleCard = ({ layout, userId = env.DEMO_USER_ID }: ScheduleCardProps) => {
+  const { data: events = [], isLoading } = useSchedule(userId);
   const aiDisclosure = useDisclosure();
   const [activeEvent, setActiveEvent] = useState<ScheduleEvent | null>(null);
   const queryClient = useQueryClient();
