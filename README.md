@@ -115,6 +115,13 @@ The frontend opens a WebSocket connection at `ws://localhost:8000/ws/dashboard`.
 - No keys? The backend ships with a deterministic stub so local development always returns valid suggestions.
 - Feedback buttons in the modal POST to `/v1/ai/feedback`; monitor the `ai_feedback` collection to tune future prompts.
 
+### AI & Assistive Features
+- **Bulk task capture** – `/v1/tasks/bulk` lets you create multiple tasks in one request, perfect for command bar workflows.
+- **Autoschedule planner** – `/v1/scheduler/plan` returns a dry-run schedule using your free time. Pair the response with `/v1/schedule-events/bulk` to commit the plan.
+- **Smart splits** – `/v1/tasks/{task_id}/subtasks/bulk` (coming soon) appends generated subtasks to a task so you can break down big items quickly.
+- **Backlog healer** – `/v1/tasks/replan` (coming soon) proposes new due dates for overdue work.
+- **Habit coach feedback** – `/v1/ai/feedback` stores reinforcement signals when a habit feels too easy or too hard.
+
 ## API Endpoints
 
 ### Users
@@ -143,6 +150,8 @@ The frontend opens a WebSocket connection at `ws://localhost:8000/ws/dashboard`.
 - `POST /v1/schedule` - Create a simple scheduled item (summary, optional times/location)
 - `GET /v1/schedule-events` - List all schedule events with advanced filtering
 - `POST /v1/schedule-events` - Create a detailed schedule event (existing schema)
+- `POST /v1/schedule-events/bulk` - Create multiple scheduled blocks in a single request
+- `POST /v1/scheduler/plan` - Generate an autoschedule plan within a specified window
 
 ### Summary
 - `GET /v1/summary` - Return a synthesized daily briefing with counts used by the Alexa skill
