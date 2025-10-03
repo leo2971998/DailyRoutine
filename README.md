@@ -220,3 +220,113 @@ frontend/
 - **Frontend**: React, TypeScript, Chakra UI, Vite
 - **Real-time**: WebSocket connections for live updates
 - **State Management**: React Query for server state
+
+---
+
+## Appendix A — FastAPI Service Guide (Consolidated)
+
+This section consolidates the backend README for quick reference.
+
+### Run locally
+
+1) Install dependencies
+```bash
+cd api
+python -m venv .venv && source .venv/bin/activate  # (Windows: .venv\Scripts\activate)
+pip install -r requirements.txt
+cp .env.example .env
+```
+
+2) Start MongoDB
+
+Local `mongod` or Docker:
+```bash
+docker run -p 27017:27017 --name mongo -d mongo:7
+```
+
+3) Launch API
+```bash
+uvicorn main:app --reload --port 8000
+```
+
+4) Smoke test
+```bash
+curl http://localhost:8000/health/live
+```
+
+### Example calls
+
+Create a user:
+```bash
+curl -X POST http://localhost:8000/v1/users \
+  -H "Content-Type: application/json" \
+  -d '{"email":"alex@example.com","name":"Alex Doe"}'
+```
+
+Create a task:
+```bash
+curl -X POST http://localhost:8000/v1/tasks \
+  -H "Content-Type: application/json" \
+  -d '{"user_id":"<USER_ID>","description":"Finish project report","priority":"high"}'
+```
+
+List tasks:
+```bash
+curl "http://localhost:8000/v1/tasks?user_id=<USER_ID>&is_completed=false"
+```
+
+Mark task complete:
+```bash
+curl -X PATCH http://localhost:8000/v1/tasks/<TASK_ID> \
+  -H "Content-Type: application/json" \
+  -d '{"is_completed": true}'
+```
+
+---
+
+## Appendix B — Drag & Drop Installation (Archived)
+
+The previous Kanban UI used drag-and-drop libraries. If you need DnD again:
+
+```bash
+npm install @dnd-kit/core @dnd-kit/sortable @dnd-kit/utilities
+```
+
+What these provide:
+- @dnd-kit/core — mobile-friendly DnD core
+- @dnd-kit/sortable — sortable lists/columns
+- @dnd-kit/utilities — helpers and a11y
+
+Benefits: mobile-first, performant, accessible, modern hooks, smaller bundle.
+
+---
+
+## Appendix C — Google Cloud Deployment (API)
+
+Deploy the FastAPI service to Cloud Run.
+
+### Dockerfile (api/Dockerfile)
+```dockerfile
+FROM python:3.12-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+COPY . .
+EXPOSE 8000
+CMD ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+```
+
+### Deploy to Cloud Run
+```bash
+gcloud builds submit --tag gcr.io/YOUR_PROJECT_ID/daily-routine-api
+gcloud run deploy daily-routine-api \
+  --image gcr.io/YOUR_PROJECT_ID/daily-routine-api \
+  --platform managed \
+  --region us-central1 \
+  --allow-unauthenticated \
+  --port 8000 \
+  --env-vars GEMINI_API_KEY=your-gemini-key,MONGO_URI=your-mongo-uri
+```
+
+### Alexa Skill (summary)
+Use `alexa/interaction-model/en-US.json`, deploy Lambda under `alexa/lambda/`, and point the skill to your Lambda ARN. Configure environment variables to target your Cloud Run API.
