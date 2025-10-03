@@ -25,6 +25,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { FiClock } from 'react-icons/fi';
 import { useTasks, useToggleTask, useCreateTask } from '@/hooks/useTasks';
 import AISidekick from './AISidekick';
+import SmartSplitWizard from './SmartSplitWizard';
 import { api } from '@/lib/api-client';
 import { env } from '@/lib/env';
 import type { Task } from '@/types';
@@ -45,7 +46,9 @@ const ChecklistCard = () => {
   const [priority, setPriority] = useState<'high' | 'medium' | 'low'>('medium');
   const toast = useToast();
   const aiDisclosure = useDisclosure();
+  const splitDisclosure = useDisclosure();
   const [activeTask, setActiveTask] = useState<Task | null>(null);
+  const [splitTask, setSplitTask] = useState<Task | null>(null);
   const queryClient = useQueryClient();
   const rowBg = 'surface.cardMuted';
   const rowBorder = 'border.subtle';
@@ -222,16 +225,28 @@ const ChecklistCard = () => {
                             </HStack>
                           </Stack>
                         </Checkbox>
-                        <IconButton
-                          aria-label="Improve with AI"
-                          icon={<span role="img" aria-hidden="true">✨</span>}
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => {
-                            setActiveTask(task);
-                            aiDisclosure.onOpen();
-                          }}
-                        />
+                        <HStack spacing={2}>
+                          <Button
+                            size="xs"
+                            variant="ghost"
+                            onClick={() => {
+                              setSplitTask(task);
+                              splitDisclosure.onOpen();
+                            }}
+                          >
+                            Split
+                          </Button>
+                          <IconButton
+                            aria-label="Improve with AI"
+                            icon={<span role="img" aria-hidden="true">✨</span>}
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              setActiveTask(task);
+                              aiDisclosure.onOpen();
+                            }}
+                          />
+                        </HStack>
                       </HStack>
                     ))}
                   </Stack>
@@ -266,6 +281,14 @@ const ChecklistCard = () => {
           }}
         />
       )}
+      <SmartSplitWizard
+        isOpen={splitDisclosure.isOpen}
+        onClose={() => {
+          splitDisclosure.onClose();
+          setSplitTask(null);
+        }}
+        task={splitTask}
+      />
     </CardContainer>
   );
 };

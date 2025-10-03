@@ -1,5 +1,5 @@
 import { api } from '@/lib/api-client';
-import type { ScheduleEvent } from '@/types';
+import type { ScheduleEvent, Subtask } from '@/types';
 
 export type PlanTaskInput = {
   _id: string;
@@ -46,6 +46,52 @@ export type BulkScheduleResponse = {
   items: ScheduleEvent[];
 };
 
+export type SplitTaskPayload = {
+  text: string;
+  max_steps?: number;
+};
+
+export type SplitTaskResponse = {
+  steps: string[];
+};
+
+export type SubtaskBulkPayload = {
+  items: Array<{
+    description: string;
+    duration_minutes?: number | null;
+    due_at?: string | null;
+  }>;
+};
+
+export type SubtaskBulkResponse = {
+  inserted: number;
+  items: Subtask[];
+};
+
+export type ReplanTasksPayload = {
+  user_id: string;
+  strategy?: 'next_free' | 'push_days';
+  dry_run?: boolean;
+  horizon_days?: number;
+  block_minutes?: number;
+};
+
+export type ReplanProposal = {
+  task_id: string;
+  old_due_date?: string | null;
+  new_due_date: string;
+  reason: string;
+};
+
+export type ReplanTasksResponse = {
+  proposals: ReplanProposal[];
+  applied: number;
+};
+
+export type HabitCoachPayload = {
+  signal: 'too_easy' | 'just_right' | 'too_hard';
+};
+
 export async function planSchedule(
   payload: PlanSchedulePayload
 ): Promise<PlanScheduleResponse> {
@@ -58,4 +104,29 @@ export async function createScheduleBulk(
 ): Promise<BulkScheduleResponse> {
   const { data } = await api.post<BulkScheduleResponse>('/schedule-events/bulk', payload);
   return data;
+}
+
+export async function splitTaskText(payload: SplitTaskPayload): Promise<SplitTaskResponse> {
+  const { data } = await api.post<SplitTaskResponse>('/tasks/ai/split', payload);
+  return data;
+}
+
+export async function createSubtasks(
+  taskId: string,
+  payload: SubtaskBulkPayload
+): Promise<SubtaskBulkResponse> {
+  const { data } = await api.post<SubtaskBulkResponse>(`/tasks/${taskId}/subtasks/bulk`, payload);
+  return data;
+}
+
+export async function replanTasks(payload: ReplanTasksPayload): Promise<ReplanTasksResponse> {
+  const { data } = await api.post<ReplanTasksResponse>('/tasks/replan', payload);
+  return data;
+}
+
+export async function applyHabitCoach(
+  habitId: string,
+  payload: HabitCoachPayload
+): Promise<void> {
+  await api.post(`/habits/${habitId}/coach/apply`, payload);
 }

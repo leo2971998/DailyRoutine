@@ -4,6 +4,7 @@ import ChecklistCard from '../ChecklistCard';
 import GreetingCard from '../GreetingCard';
 import ProgressPanel from '../ProgressPanel';
 import AIPlanCard from '../AIPlanCard';
+import BacklogHealerCard from '../BacklogHealerCard';
 import type { Habit, HabitLog, Task, User, ProgressSummary } from '@/types';
 import { useTasks } from '@/hooks/useTasks';
 import { useHabitLogs } from '@/hooks/useHabits';
@@ -59,6 +60,9 @@ const OverviewTab = ({ user, tasks, habits, isTasksLoading, isHabitsLoading }: O
       </GridItem>
       <GridItem colSpan={{ base: 1, lg: 3 }}>
         <ChecklistCard />
+      </GridItem>
+      <GridItem colSpan={{ base: 1, lg: 2 }}>
+        <BacklogHealerCard userId={user?._id} />
       </GridItem>
     </Grid>
   );

@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Literal
 from bson import ObjectId
 from fastapi import APIRouter, HTTPException, Query
+from pydantic import BaseModel
 
 if __package__:
     from .app.db import get_db
@@ -15,8 +17,10 @@ else:  # pragma: no cover - handles ``uvicorn main:app`` when cwd==api/
 
 if __package__:
     from .app.utils.object_ids import resolve_object_id
+    from .app.services.habit_coach import propose_adjustment
 else:  # pragma: no cover
     from app.utils.object_ids import resolve_object_id
+    from app.services.habit_coach import propose_adjustment
 
 
 router = APIRouter(prefix="/habits", tags=["habits"])
@@ -27,6 +31,10 @@ def _parse_object_id(value: str, field: str) -> ObjectId:
         return resolve_object_id(value, field)
     except ValueError as exc:  # pragma: no cover - defensive guard
         raise HTTPException(status_code=400, detail=f"Invalid {field}") from exc
+
+
+class HabitCoachRequest(BaseModel):
+    signal: Literal["too_easy", "just_right", "too_hard"]
 
 
 @router.post("", response_model=Habit, status_code=201)
@@ -72,6 +80,27 @@ async def update_habit(habit_id: str, payload: HabitUpdate) -> Habit:
     res = await habits.update_one({"_id": oid}, {"$set": update_data})
     if res.matched_count == 0:
         raise HTTPException(status_code=404, detail="Habit not found")
+
+    saved = await habits.find_one({"_id": oid})
+    if not saved:
+        raise HTTPException(status_code=404, detail="Habit not found")
+    return Habit.model_validate(saved)
+
+
+@router.post("/{habit_id}/coach/apply", response_model=Habit)
+async def apply_habit_coach(habit_id: str, payload: HabitCoachRequest) -> Habit:
+    db = get_db()
+    habits = db.habits
+
+    oid = _parse_object_id(habit_id, "habit_id")
+    habit_doc = await habits.find_one({"_id": oid})
+    if not habit_doc:
+        raise HTTPException(status_code=404, detail="Habit not found")
+
+    patch = propose_adjustment(habit_doc, payload.signal)
+    patch["updated_at"] = datetime.utcnow()
+
+    await habits.update_one({"_id": oid}, {"$set": patch})
 
     saved = await habits.find_one({"_id": oid})
     if not saved:

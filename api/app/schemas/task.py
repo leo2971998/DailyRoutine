@@ -1,9 +1,21 @@
 from datetime import datetime
-from typing import Literal, Optional
+from typing import List, Literal, Optional
+
 from pydantic import Field
+
 from .common import MongoModel, PyObjectId
 
 Priority = Literal["high", "medium", "low"]
+
+
+class TaskSubtask(MongoModel):
+    id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
+    description: str
+    duration_minutes: Optional[int] = None
+    due_at: Optional[datetime] = None
+    is_completed: bool = False
+    created_at: datetime
+    updated_at: datetime
 
 
 class Task(MongoModel):
@@ -14,6 +26,8 @@ class Task(MongoModel):
     due_date: Optional[datetime] = None
     priority: Priority = "medium"
     created_at: datetime
+    updated_at: datetime
+    subtasks: List[TaskSubtask] = Field(default_factory=list)
 
 
 class TaskCreate(MongoModel):
