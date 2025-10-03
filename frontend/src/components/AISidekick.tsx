@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Modal,
   ModalOverlay,
@@ -21,6 +21,8 @@ import {
   Spinner,
 } from '@chakra-ui/react';
 import { aiSuggest, AIIntent, AISuggestion, AIPatchRef } from '@/lib/aiClient';
+
+type AIFeedbackSignal = 'too_easy' | 'just_right' | 'too_hard' | 'applied' | 'dismissed';
 
 export interface AISidekickProps {
   isOpen: boolean;
@@ -51,16 +53,51 @@ export default function AISidekick({
   const [tabIndex, setTabIndex] = useState(DEFAULT_TAB);
   const [applyingIndex, setApplyingIndex] = useState<number | null>(null);
 
+  const entityId = useMemo(() => extractEntityId(entityData), [entityData]);
+  const normalizedBase = useMemo(() => apiBase.replace(/\/+$/, ''), [apiBase]);
+
+  const sendFeedback = useCallback(
+    async (signal: AIFeedbackSignal, suggestionTitle?: string) => {
+      if (!entityId) return;
+      try {
+        await fetch(`${normalizedBase}/v1/ai/feedback`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_id: userId,
+            entity_type: entityType,
+            entity_id: entityId,
+            signal,
+            suggestion_title: suggestionTitle,
+            intent,
+          }),
+        });
+      } catch (error) {
+        console.warn('AI feedback request failed', error);
+      }
+    },
+    [entityId, entityType, intent, normalizedBase, userId]
+  );
+
   const fetchSuggestions = useCallback(async () => {
     try {
       setLoading(true);
       setSuggestions([]);
+      let timeZone = 'America/Chicago';
+      try {
+        const resolved = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        if (resolved) {
+          timeZone = resolved;
+        }
+      } catch (error) {
+        console.warn('Could not resolve time zone', error);
+      }
       const payload = {
         user_id: userId,
         entity: { type: entityType, data: entityData },
         intent,
         preferences: {
-          time_zone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          time_zone: timeZone,
         },
       };
       const data = await aiSuggest(apiBase, payload);
@@ -84,17 +121,23 @@ export default function AISidekick({
   }, [fetchSuggestions, isOpen]);
 
   const handleClose = () => {
+    void sendFeedback('dismissed');
     setTabIndex(DEFAULT_TAB);
     setSuggestions([]);
     setApplyingIndex(null);
     onClose();
   };
 
-  const handleApply = async (patch: Required<AIPatchRef>, index: number) => {
+  const handleApply = async (
+    suggestion: AISuggestion,
+    patch: Required<AIPatchRef>,
+    index: number
+  ) => {
     try {
       setApplyingIndex(index);
       await onApply(patch);
       toast({ title: 'Suggestion applied', status: 'success' });
+      void sendFeedback('applied', suggestion.title);
       await fetchSuggestions();
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
@@ -136,7 +179,13 @@ export default function AISidekick({
                             size="sm"
                             variant="solid"
                             colorScheme="orange"
-                            onClick={() => handleApply(sanitizePatch(suggestion.apply_patch), index)}
+                            onClick={() =>
+                              handleApply(
+                                suggestion,
+                                sanitizePatch(suggestion.apply_patch),
+                                index
+                              )
+                            }
                             isLoading={applyingIndex === index}
                           >
                             Apply
@@ -155,6 +204,32 @@ export default function AISidekick({
                             </Code>
                           </>
                         )}
+                        <HStack spacing={2} flexWrap="wrap" pt={1}>
+                          <Text fontSize="xs" color="gray.500">
+                            How was this?
+                          </Text>
+                          <Button
+                            size="xs"
+                            variant="ghost"
+                            onClick={() => void sendFeedback('too_easy', suggestion.title)}
+                          >
+                            Too easy
+                          </Button>
+                          <Button
+                            size="xs"
+                            variant="ghost"
+                            onClick={() => void sendFeedback('just_right', suggestion.title)}
+                          >
+                            Just right
+                          </Button>
+                          <Button
+                            size="xs"
+                            variant="ghost"
+                            onClick={() => void sendFeedback('too_hard', suggestion.title)}
+                          >
+                            Too hard
+                          </Button>
+                        </HStack>
                       </VStack>
                     ))
                   )}
@@ -184,4 +259,10 @@ function sanitizePatch(patch: AIPatchRef): Required<AIPatchRef> {
     method: (patch.method ?? 'PATCH').toUpperCase() as Required<AIPatchRef>['method'],
     body: patch.body ?? {},
   };
+}
+
+function extractEntityId(data: Record<string, unknown> | undefined): string | undefined {
+  if (!data) return undefined;
+  const raw = (data['_id'] ?? data['id']) as unknown;
+  return typeof raw === 'string' ? raw : undefined;
 }

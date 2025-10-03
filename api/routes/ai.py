@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import os
+import time
+from collections import defaultdict, deque
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Deque, Dict, List, Literal, Optional
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 if __package__:
@@ -45,10 +48,24 @@ class AISuggestOut(BaseModel):
     suggestions: List[Suggestion]
 
 
+class AIFeedbackIn(BaseModel):
+    user_id: str
+    entity_type: Literal["task", "habit", "schedule"]
+    entity_id: str
+    signal: Literal["too_easy", "just_right", "too_hard", "applied", "dismissed"]
+    suggestion_title: Optional[str] = None
+    intent: Optional[str] = None
+
+
 AI_PROVIDER = os.getenv("AI_PROVIDER", "gemini")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 MAX_TOKENS = int(os.getenv("AI_MAX_TOKENS", "800"))
+RATE_LIMIT_PER_MINUTE = int(os.getenv("AI_SUGGEST_RATE_LIMIT", "30"))
+RATE_LIMIT_WINDOW_SECONDS = 60
+
+_rate_buckets: dict[str, Deque[float]] = defaultdict(deque)
+_rate_lock = asyncio.Lock()
 
 SYSTEM_HINT = (
     "You are an assistant that rewrites tasks to be clear and actionable, "
@@ -85,12 +102,51 @@ PROMPT_TEMPLATES = {
 }
 
 
+async def enforce_rate_limit(user_id: str) -> None:
+    if RATE_LIMIT_PER_MINUTE <= 0:
+        return
+
+    now = time.monotonic()
+    async with _rate_lock:
+        bucket = _rate_buckets[user_id]
+        while bucket and now - bucket[0] > RATE_LIMIT_WINDOW_SECONDS:
+            bucket.popleft()
+        if len(bucket) >= RATE_LIMIT_PER_MINUTE:
+            raise HTTPException(status_code=429, detail="AI suggestions rate limit exceeded")
+        bucket.append(now)
+
+
 async def generate_text(prompt: str, intent: str, payload: Dict[str, Any]) -> str:
     provider = AI_PROVIDER.lower()
 
     # Placeholder until real provider wiring is added. If keys are missing we fall back immediately.
     has_key = (provider == "gemini" and GEMINI_API_KEY) or (provider == "openai" and OPENAI_API_KEY)
     if not has_key:
+        if intent == "task_improve":
+            return """
+    {"suggestions":[
+      {
+        "title":"Rewrite for clarity",
+        "diff":{"description":"Email Professor Lin about Project 2"},
+        "explanation":"Start with a verb; add target and context.",
+        "apply_patch":{
+          "endpoint":"/v1/tasks/{id}",
+          "method":"PATCH",
+          "body":{"description":"Email Professor Lin about Project 2"}
+        }
+      },
+      {
+        "title":"Split into 3 steps",
+        "diff":{"subtasks":["Draft bullets","Write email","Send before 4pm"]},
+        "explanation":"Smaller pieces reduce friction.",
+        "apply_patch":{
+          "endpoint":"/v1/tasks/{id}/subtasks",
+          "method":"POST",
+          "body":{"items":["Draft bullets","Write email","Send before 4pm"]}
+        }
+      }
+    ]}
+    """
         return json.dumps({"suggestions": build_fallback(intent, payload)})
 
     # Pseudocode – replace with real provider clients when credentials are available.
@@ -120,32 +176,69 @@ async def generate_text(prompt: str, intent: str, payload: Dict[str, Any]) -> st
 
 def sanitize_entity(intent: str, entity: Entity) -> Dict[str, Any]:
     data = entity.data or {}
-    allowed_fields = {
-        "task": {"description", "due_date", "priority", "is_completed", "notes", "title"},
-        "habit": {"name", "goal_repetitions", "goal_period", "reminders"},
-        "schedule": {"title", "start_time", "end_time", "description", "location"},
-    }
-
     if intent == "dashboard_plan":
         tasks = [
-            truncate_strings({k: v for k, v in item.items() if k in {"description", "due_date", "priority"}})
+            truncate_strings(
+                {
+                    "description": item.get("description") or item.get("title"),
+                    "due_date": item.get("due_date"),
+                    "priority": item.get("priority"),
+                }
+            )
             for item in data.get("tasks", [])[:8]
         ]
         habits = [
-            truncate_strings({k: v for k, v in item.items() if k in {"name", "goal_repetitions", "goal_period"}})
+            truncate_strings(
+                {
+                    "name": item.get("name"),
+                    "goal_repetitions": item.get("goal_repetitions"),
+                    "goal_period": item.get("goal_period"),
+                }
+            )
             for item in data.get("habits", [])[:8]
         ]
         events = [
-            truncate_strings({k: v for k, v in item.items() if k in {"title", "start_time", "end_time", "description"}})
+            truncate_strings(
+                {
+                    "summary": item.get("summary") or item.get("title"),
+                    "start_time": item.get("start_time"),
+                    "end_time": item.get("end_time"),
+                }
+            )
             for item in data.get("events", [])[:8]
         ]
         return {"tasks": tasks, "habits": habits, "events": events}
 
-    allowed = allowed_fields.get(entity.type, set())
     sanitized: Dict[str, Any] = {}
-    for key in allowed:
-        if key in data and data[key] is not None:
-            sanitized[key] = truncate_strings(data[key])
+    if entity.type == "task":
+        description = data.get("description") or data.get("title")
+        if description:
+            sanitized["description"] = truncate_strings(description)
+        if data.get("due_date") is not None:
+            sanitized["due_date"] = truncate_strings(data.get("due_date"))
+        if data.get("priority") is not None:
+            sanitized["priority"] = truncate_strings(data.get("priority"))
+        return sanitized
+
+    if entity.type == "habit":
+        if data.get("name"):
+            sanitized["name"] = truncate_strings(data.get("name"))
+        if data.get("goal_repetitions") is not None:
+            sanitized["goal_repetitions"] = truncate_strings(data.get("goal_repetitions"))
+        if data.get("goal_period") is not None:
+            sanitized["goal_period"] = truncate_strings(data.get("goal_period"))
+        return sanitized
+
+    if entity.type == "schedule":
+        summary = data.get("summary") or data.get("title")
+        if summary:
+            sanitized["summary"] = truncate_strings(summary)
+        if data.get("start_time") is not None:
+            sanitized["start_time"] = truncate_strings(data.get("start_time"))
+        if data.get("end_time") is not None:
+            sanitized["end_time"] = truncate_strings(data.get("end_time"))
+        return sanitized
+
     return sanitized
 
 
@@ -224,14 +317,14 @@ def build_fallback(intent: str, payload: Dict[str, Any]) -> List[Dict[str, Any]]
         ]
 
     if intent == "schedule_optimize":
-        title = entity_data.get("title") or "Focus Session"
+        summary = entity_data.get("summary") or entity_data.get("title") or "Focus Session"
         start = entity_data.get("start_time")
         if start:
             new_start = shift_schedule_time(start)
         else:
             new_start = None
-        diff: Dict[str, Any] = {"title": title}
-        body: Dict[str, Any] = {}
+        diff: Dict[str, Any] = {"summary": summary}
+        body: Dict[str, Any] = {"summary": summary}
         if new_start:
             diff["start_time"] = new_start
             body["start_time"] = new_start
@@ -241,9 +334,9 @@ def build_fallback(intent: str, payload: Dict[str, Any]) -> List[Dict[str, Any]]
                 "diff": diff,
                 "explanation": "Creates space to settle in before the event.",
                 "apply_patch": {
-                    "endpoint": "/v1/schedule-events/{id}",
+                    "endpoint": "/v1/schedule_events/{id}",
                     "method": "PATCH",
-                    "body": body or {"title": title},
+                    "body": body,
                 },
             }
         ]
@@ -316,12 +409,16 @@ def shift_schedule_time(value: Any) -> Optional[str]:
 async def ai_suggest(body: AISuggestIn) -> AISuggestOut:
     import json as _json
 
+    await enforce_rate_limit(body.user_id)
+
     sanitized_data = sanitize_entity(body.intent, body.entity)
+    preferences = dict(body.preferences or {})
+    preferences.setdefault("time_zone", "America/Chicago")
     payload = {
         "user_id": body.user_id,
         "entity": {"type": body.entity.type, "data": sanitized_data},
         "intent": body.intent,
-        "preferences": body.preferences,
+        "preferences": preferences,
         "now_iso": datetime.utcnow().isoformat() + "Z",
     }
     prompt_template = PROMPT_TEMPLATES[body.intent]
@@ -361,6 +458,13 @@ async def ai_suggest(body: AISuggestIn) -> AISuggestOut:
         pass
 
     return AISuggestOut(suggestions=suggestions)
+
+
+@router.post("/feedback")
+async def ai_feedback(body: AIFeedbackIn) -> Dict[str, bool]:
+    db = get_db()
+    await db.ai_feedback.insert_one({**body.model_dump(), "ts": datetime.utcnow()})
+    return {"ok": True}
 
 
 __all__ = ["router"]
