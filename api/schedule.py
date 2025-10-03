@@ -1,11 +1,16 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
-from typing import Optional
+from typing import List, Optional
 
 from bson import ObjectId
 from fastapi import APIRouter, HTTPException, Query
-from pydantic import BaseModel, Field
+from pydantic import AliasChoices, BaseModel, Field
+
+try:  # Pydantic v2
+    from pydantic import ConfigDict
+except ImportError:  # pragma: no cover
+    ConfigDict = None  # type: ignore
 
 if __package__:
     from .app.db import get_db
@@ -58,6 +63,35 @@ def _parse_object_id(value: str, field: str) -> ObjectId:
         raise HTTPException(status_code=400, detail=f"Invalid {field}") from exc
 
 
+class ScheduleBlockIn(BaseModel):
+    summary: str = Field(..., min_length=1)
+    start_time: datetime = Field(
+        ..., validation_alias=AliasChoices("start_at", "start_time"), alias="start_time"
+    )
+    end_time: datetime = Field(
+        ..., validation_alias=AliasChoices("end_at", "end_time"), alias="end_time"
+    )
+    description: Optional[str] = None
+    location: Optional[str] = None
+    task_id: Optional[str] = None
+
+    if ConfigDict is not None:  # pragma: no branch - guarded import
+        model_config = ConfigDict(populate_by_name=True)
+    else:  # pragma: no cover - Pydantic v1 fallback
+        class Config:
+            allow_population_by_field_name = True
+
+
+class BulkBlocksIn(BaseModel):
+    user_id: str
+    blocks: List[ScheduleBlockIn]
+
+
+class BulkBlocksOut(BaseModel):
+    inserted: int
+    items: List[ScheduleEvent]
+
+
 @router.post("", response_model=ScheduleEvent, status_code=201)
 async def create_event(payload: ScheduleEventCreate) -> ScheduleEvent:
     db = get_db()
@@ -77,6 +111,59 @@ async def create_event(payload: ScheduleEventCreate) -> ScheduleEvent:
     event = ScheduleEvent.from_mongo(saved)
     await broadcast_event("schedule_created", {"event_id": str(event.id)})
     return event
+
+
+@router.post("/bulk", response_model=BulkBlocksOut, status_code=201)
+async def create_blocks_bulk(payload: BulkBlocksIn) -> BulkBlocksOut:
+    db = get_db()
+    events = db.schedule_events
+
+    if not payload.blocks:
+        return BulkBlocksOut(inserted=0, items=[])
+
+    now = datetime.utcnow()
+    user_id = _parse_object_id(payload.user_id, "user_id")
+
+    documents: List[dict] = []
+    for block in payload.blocks:
+        summary = block.summary.strip()
+        if not summary:
+            raise HTTPException(status_code=400, detail="Block summary is required")
+
+        start_time = _normalize_datetime(block.start_time)
+        end_time = _normalize_datetime(block.end_time)
+        if end_time <= start_time:
+            raise HTTPException(status_code=400, detail="Block end time must be after start time")
+
+        doc = {
+            "user_id": user_id,
+            "title": summary,
+            "summary": summary,
+            "description": block.description,
+            "location": block.location,
+            "start_time": start_time,
+            "end_time": end_time,
+            "created_at": now,
+            "updated_at": now,
+        }
+        if block.task_id:
+            doc["task_id"] = block.task_id
+        documents.append(doc)
+
+    result = await events.insert_many(documents)
+
+    inserted_ids = list(result.inserted_ids)
+    cursor = events.find({"_id": {"$in": inserted_ids}})
+    saved: List[ScheduleEvent] = []
+    async for doc in cursor:
+        saved.append(ScheduleEvent.from_mongo(doc))
+
+    saved.sort(key=lambda item: item.start_time)
+
+    for event in saved:
+        await broadcast_event("schedule_created", {"event_id": str(event.id)})
+
+    return BulkBlocksOut(inserted=len(saved), items=saved)
 
 
 @alias_router.post("", response_model=ScheduleEvent, status_code=201)
