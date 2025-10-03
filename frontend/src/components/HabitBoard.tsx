@@ -18,6 +18,7 @@ import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recha
 import { useHabits, useHabitLogs, useLogHabit } from '@/hooks/useHabits';
 import { useQueryClient } from '@tanstack/react-query';
 import AISidekick from './AISidekick';
+import HabitFeedbackToast from './HabitFeedbackToast';
 import { api } from '@/lib/api-client';
 import { env } from '@/lib/env';
 import type { Habit, HabitLog } from '@/types';
@@ -35,6 +36,7 @@ const HabitBoard = () => {
   const aiDisclosure = useDisclosure();
   const queryClient = useQueryClient();
   const [activeHabit, setActiveHabit] = useState<HabitWithLogs | null>(null);
+  const [feedbackHabit, setFeedbackHabit] = useState<HabitWithLogs | null>(null);
   const apiBase = api.defaults.baseURL ?? env.API_URL;
 
   const enrichedHabits = useMemo<HabitWithLogs[]>(() => {
@@ -91,7 +93,13 @@ const HabitBoard = () => {
               <HabitCard
                 key={habit._id}
                 habit={habit}
-                onLog={(status) => handleLogHabit(logHabit, habit, status, toast)}
+                onLog={(status) =>
+                  handleLogHabit(logHabit, habit, status, toast, () => {
+                    if (status === 'completed') {
+                      setFeedbackHabit(habit);
+                    }
+                  })
+                }
                 isLogging={logHabit.isPending}
                 onOpenSidekick={(selected) => {
                   setActiveHabit(selected);
@@ -138,6 +146,13 @@ const HabitBoard = () => {
           }}
         />
       )}
+      <HabitFeedbackToast
+        habitId={feedbackHabit?._id ?? ''}
+        habitName={feedbackHabit?.name ?? ''}
+        userId={feedbackHabit?.user_id ?? env.DEMO_USER_ID}
+        isOpen={!!feedbackHabit}
+        onClose={() => setFeedbackHabit(null)}
+      />
     </CardContainer>
   );
 };
@@ -257,7 +272,8 @@ const handleLogHabit = (
   mutation: ReturnType<typeof useLogHabit>,
   habit: Habit,
   status: 'completed' | 'missed',
-  toast: ReturnType<typeof useToast>
+  toast: ReturnType<typeof useToast>,
+  onLogged?: () => void
 ) => {
   mutation.mutate(
     {
@@ -269,6 +285,7 @@ const handleLogHabit = (
     {
       onSuccess: () => {
         toast({ title: status === 'completed' ? 'Habit logged' : 'Marked missed', status: 'success' });
+        onLogged?.();
       },
       onError: () => {
         toast({ title: 'Could not update habit log', status: 'error' });

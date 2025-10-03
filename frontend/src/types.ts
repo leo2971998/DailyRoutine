@@ -11,6 +11,16 @@ export type User = {
   created_at: string;
 };
 
+export type Subtask = {
+  _id: Id;
+  description: string;
+  duration_minutes?: number | null;
+  due_at?: string | null;
+  is_completed: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
 export type Task = {
   _id: Id;
   user_id: Id;
@@ -19,6 +29,8 @@ export type Task = {
   due_date: string | null;
   priority: Priority;
   created_at: string;
+  updated_at: string;
+  subtasks?: Subtask[];
 };
 
 export type Habit = {
@@ -28,6 +40,9 @@ export type Habit = {
   goal_repetitions: number;
   goal_period: HabitPeriod;
   created_at: string;
+  updated_at?: string | null;
+  coach_note?: string | null;
+  coach_recommended_at?: string | null;
 };
 
 export type HabitLog = {

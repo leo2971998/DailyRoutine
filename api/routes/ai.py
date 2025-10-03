@@ -48,15 +48,6 @@ class AISuggestOut(BaseModel):
     suggestions: List[Suggestion]
 
 
-class AIFeedbackIn(BaseModel):
-    user_id: str
-    entity_type: Literal["task", "habit", "schedule"]
-    entity_id: str
-    signal: Literal["too_easy", "just_right", "too_hard", "applied", "dismissed"]
-    suggestion_title: Optional[str] = None
-    intent: Optional[str] = None
-
-
 AI_PROVIDER = os.getenv("AI_PROVIDER", "gemini")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -458,13 +449,6 @@ async def ai_suggest(body: AISuggestIn) -> AISuggestOut:
         pass
 
     return AISuggestOut(suggestions=suggestions)
-
-
-@router.post("/feedback")
-async def ai_feedback(body: AIFeedbackIn) -> Dict[str, bool]:
-    db = get_db()
-    await db.ai_feedback.insert_one({**body.model_dump(), "ts": datetime.utcnow()})
-    return {"ok": True}
 
 
 __all__ = ["router"]

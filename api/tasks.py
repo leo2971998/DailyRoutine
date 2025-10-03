@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from datetime import datetime
-from typing import Optional
+from datetime import datetime, timedelta
+from typing import List, Literal, Optional
 
 from bson import ObjectId
 from fastapi import APIRouter, HTTPException, Query
@@ -11,10 +11,12 @@ if __package__:
     from .app.db import get_db
     from .app.schemas.common import ListResponse
     from .app.schemas.task import Task, TaskCreate, TaskUpdate
+    from .app.services.freebusy import get_free_intervals
 else:  # pragma: no cover - handles ``uvicorn main:app`` when cwd==api/
     from app.db import get_db
     from app.schemas.common import ListResponse
     from app.schemas.task import Task, TaskCreate, TaskUpdate
+    from app.services.freebusy import get_free_intervals
 
 if __package__:
     from .app.utils.broadcast import broadcast_event
@@ -30,6 +32,29 @@ router = APIRouter(prefix="/tasks", tags=["tasks"])
 class CompleteByNameRequest(BaseModel):
     user_id: str = Field(..., description="User identifier or alias")
     name: str = Field(..., min_length=1, description="Task description fragment")
+
+
+class ReplanRequest(BaseModel):
+    user_id: str = Field(..., description="User identifier or alias")
+    strategy: Literal["next_free", "push_days"] = "next_free"
+    dry_run: bool = True
+    horizon_days: int = Field(7, ge=1, le=30, description="Window to search for free time")
+    block_minutes: int = Field(60, ge=15, le=240, description="Duration assigned to each overdue task")
+
+
+class ReplanProposal(BaseModel):
+    task_id: str = Field(..., alias="_id")
+    old_due_date: Optional[datetime] = None
+    new_due_date: datetime
+    reason: str = Field(default="next_free_slot")
+
+    class Config:
+        allow_population_by_field_name = True
+
+
+class ReplanResponse(BaseModel):
+    proposals: List[ReplanProposal] = Field(default_factory=list)
+    applied: int = 0
 
 
 def _parse_object_id(value: str, field: str) -> ObjectId:
@@ -51,6 +76,7 @@ async def create_task(payload: TaskCreate) -> Task:
         "created_at": now,
         "updated_at": now,
     })
+    doc.setdefault("subtasks", [])
 
     res = await tasks.insert_one(doc)
     saved = await tasks.find_one({"_id": res.inserted_id})
@@ -136,3 +162,83 @@ async def complete_by_name(payload: CompleteByNameRequest) -> Task:
     assert saved is not None
     await broadcast_event("task_completed", {"task_id": str(match_id)})
     return Task.model_validate(saved)
+
+
+@router.post("/replan", response_model=ReplanResponse)
+async def replan_tasks(payload: ReplanRequest) -> ReplanResponse:
+    db = get_db()
+    tasks = db.tasks
+
+    user_oid = _parse_object_id(payload.user_id, "user_id")
+    now = datetime.utcnow()
+
+    cursor = (
+        tasks.find(
+            {
+                "user_id": user_oid,
+                "is_completed": False,
+                "due_date": {"$lt": now},
+            }
+        )
+        .sort("due_date", 1)
+    )
+
+    overdue: list[dict] = []
+    async for doc in cursor:
+        overdue.append(doc)
+
+    if not overdue:
+        return ReplanResponse(proposals=[])
+
+    proposals: List[ReplanProposal] = []
+    block_delta = timedelta(minutes=payload.block_minutes)
+    free_slots: List[datetime] = []
+
+    if payload.strategy == "next_free":
+        window_end = now + timedelta(days=payload.horizon_days)
+        try:
+            intervals = await get_free_intervals(
+                db,
+                payload.user_id,
+                now,
+                window_end,
+                block_minutes=payload.block_minutes,
+            )
+        except ValueError:
+            intervals = []
+
+        for interval in intervals:
+            cursor_time = interval["start"]
+            while cursor_time + block_delta <= interval["end"]:
+                free_slots.append(cursor_time)
+                cursor_time += block_delta
+
+    applied_updates = 0
+    fallback_base = now.replace(hour=17, minute=0, second=0, microsecond=0)
+    for index, doc in enumerate(overdue):
+        slot: datetime | None = free_slots[index] if index < len(free_slots) else None
+        reason = "next_free_slot"
+        if slot is None:
+            reason = "fallback_push"
+            slot = fallback_base + timedelta(days=index + 1)
+
+        proposal = ReplanProposal(
+            _id=str(doc["_id"]),
+            old_due_date=doc.get("due_date"),
+            new_due_date=slot,
+            reason=reason,
+        )
+        proposals.append(proposal)
+
+        if not payload.dry_run:
+            update = {
+                "$set": {
+                    "due_date": slot,
+                    "updated_at": now,
+                }
+            }
+            await tasks.update_one({"_id": doc["_id"]}, update)
+            await broadcast_event("task_updated", {"task_id": str(doc["_id"])})
+            applied_updates += 1
+
+    return ReplanResponse(proposals=proposals, applied=applied_updates)

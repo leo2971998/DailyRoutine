@@ -35,6 +35,16 @@ async def ensure_indexes() -> None:
         # schedule_events: list by user + start time
         await db.schedule_events.create_index([("user_id", ASCENDING), ("start_time", ASCENDING)])
 
+        # ai_feedback: query recent feedback per entity and signal
+        await db.ai_feedback.create_index(
+            [
+                ("user_id", ASCENDING),
+                ("ts", -1),
+                ("entity_type", ASCENDING),
+                ("signal", ASCENDING),
+            ]
+        )
+
         # insights cache: expire old entries and allow hash lookups
         await db.insights.create_index([("ts", ASCENDING)], expireAfterSeconds=60 * 60 * 24 * 90)
         await db.insights.create_index([("facts_hash", ASCENDING)])
