@@ -3,9 +3,11 @@ import { useMemo } from 'react';
 import ChecklistCard from '../ChecklistCard';
 import GreetingCard from '../GreetingCard';
 import ProgressPanel from '../ProgressPanel';
+import AIPlanCard from '../AIPlanCard';
 import type { Habit, HabitLog, Task, User, ProgressSummary } from '@/types';
 import { useTasks } from '@/hooks/useTasks';
 import { useHabitLogs } from '@/hooks/useHabits';
+import { useSchedule } from '@/hooks/useSchedule';
 
 interface OverviewTabProps {
   user?: User;
@@ -20,6 +22,7 @@ const OverviewTab = ({ user, tasks, habits, isTasksLoading, isHabitsLoading }: O
     is_completed: true,
   });
   const { data: habitLogs = [], isLoading: isHabitLogsLoading } = useHabitLogs();
+  const { data: scheduleEvents = [], isLoading: isScheduleLoading } = useSchedule();
 
   const progress = useMemo<ProgressSummary>(() => {
     const todaysLogs = getTodaysHabitLogs(habitLogs);
@@ -34,7 +37,8 @@ const OverviewTab = ({ user, tasks, habits, isTasksLoading, isHabitsLoading }: O
     };
   }, [completedTasks.length, habitLogs, habits.length, tasks.length]);
 
-  const summaryLoading = isTasksLoading || isHabitsLoading || isCompletedLoading || isHabitLogsLoading;
+  const summaryLoading =
+    isTasksLoading || isHabitsLoading || isCompletedLoading || isHabitLogsLoading || isScheduleLoading;
 
   return (
     <Grid templateColumns={{ base: '1fr', lg: 'repeat(5, 1fr)' }} gap={{ base: 6, lg: 8 }} alignItems="stretch">
@@ -43,6 +47,15 @@ const OverviewTab = ({ user, tasks, habits, isTasksLoading, isHabitsLoading }: O
       </GridItem>
       <GridItem colSpan={{ base: 1, lg: 2 }}>
         <ProgressPanel progress={progress} isLoading={summaryLoading} />
+      </GridItem>
+      <GridItem colSpan={{ base: 1, lg: 2 }}>
+        <AIPlanCard
+          tasks={tasks}
+          habits={habits}
+          events={scheduleEvents}
+          userId={user?._id}
+          isLoading={summaryLoading}
+        />
       </GridItem>
       <GridItem colSpan={{ base: 1, lg: 3 }}>
         <ChecklistCard />

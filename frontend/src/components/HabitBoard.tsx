@@ -2,18 +2,24 @@ import {
   Box,
   Button,
   HStack,
+  IconButton,
   Progress,
   SimpleGrid,
   Skeleton,
   Stack,
   Text,
+  useDisclosure,
   useColorModeValue,
   useToast,
 } from '@chakra-ui/react';
 import dayjs from 'dayjs';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { useHabits, useHabitLogs, useLogHabit } from '@/hooks/useHabits';
+import { useQueryClient } from '@tanstack/react-query';
+import AISidekick from './AISidekick';
+import { api } from '@/lib/api-client';
+import { env } from '@/lib/env';
 import type { Habit, HabitLog } from '@/types';
 import CardContainer from './ui/CardContainer';
 
@@ -26,6 +32,10 @@ const HabitBoard = () => {
   const { data: habits = [], isLoading } = useHabits();
   const { data: habitLogs = [], isLoading: isLogsLoading } = useHabitLogs();
   const logHabit = useLogHabit();
+  const aiDisclosure = useDisclosure();
+  const queryClient = useQueryClient();
+  const [activeHabit, setActiveHabit] = useState<HabitWithLogs | null>(null);
+  const apiBase = api.defaults.baseURL ?? env.API_URL;
 
   const enrichedHabits = useMemo<HabitWithLogs[]>(() => {
     const logsByHabit = habitLogs.reduce<Record<string, HabitLog[]>>((acc, log) => {
@@ -83,6 +93,10 @@ const HabitBoard = () => {
                 habit={habit}
                 onLog={(status) => handleLogHabit(logHabit, habit, status, toast)}
                 isLogging={logHabit.isPending}
+                onOpenSidekick={(selected) => {
+                  setActiveHabit(selected);
+                  aiDisclosure.onOpen();
+                }}
               />
             ))}
           </SimpleGrid>
@@ -95,6 +109,35 @@ const HabitBoard = () => {
         backgroundImage="radial-gradient(circle at 10% 18%, rgba(249, 115, 22, 0.22), transparent 60%)"
         pointerEvents="none"
       />
+      {activeHabit && (
+        <AISidekick
+          isOpen={aiDisclosure.isOpen}
+          onClose={() => {
+            aiDisclosure.onClose();
+            setActiveHabit(null);
+          }}
+          apiBase={apiBase}
+          userId={activeHabit.user_id ?? env.DEMO_USER_ID}
+          entityType="habit"
+          entityData={activeHabit}
+          intent="habit_improve"
+          onApply={async (patch) => {
+            if (!activeHabit) {
+              throw new Error('No habit selected');
+            }
+            const endpoint = patch.endpoint.replace('{id}', activeHabit._id);
+            await api.request({
+              url: endpoint,
+              method: patch.method,
+              data: patch.body,
+            });
+            await Promise.all([
+              queryClient.invalidateQueries({ queryKey: ['habits'] }),
+              queryClient.invalidateQueries({ queryKey: ['habit-logs'] }),
+            ]);
+          }}
+        />
+      )}
     </CardContainer>
   );
 };
@@ -103,9 +146,10 @@ type HabitCardProps = {
   habit: HabitWithLogs;
   onLog: (status: 'completed' | 'missed') => void;
   isLogging: boolean;
+  onOpenSidekick: (habit: HabitWithLogs) => void;
 };
 
-const HabitCard = ({ habit, onLog, isLogging }: HabitCardProps) => {
+const HabitCard = ({ habit, onLog, isLogging, onOpenSidekick }: HabitCardProps) => {
   const accent = useColorModeValue('bg.secondary', 'whiteAlpha.100');
   const border = useColorModeValue('border.subtle', 'whiteAlpha.200');
   const todayCount = getRepetitionsForDay(habit.logs, dayjs());
@@ -142,6 +186,16 @@ const HabitCard = ({ habit, onLog, isLogging }: HabitCardProps) => {
       position="relative"
       overflow="hidden"
     >
+      <IconButton
+        aria-label="Improve habit with AI"
+        icon={<span role="img" aria-hidden="true">✨</span>}
+        size="sm"
+        variant="ghost"
+        position="absolute"
+        top={3}
+        right={3}
+        onClick={() => onOpenSidekick(habit)}
+      />
       <Box
         position="absolute"
         top={-20}

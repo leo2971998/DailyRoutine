@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 from pydantic import Field
+
 from .common import MongoModel, PyObjectId
 
 
@@ -14,6 +15,7 @@ class ScheduleEvent(MongoModel):
     description: Optional[str] = None
     location: Optional[str] = None
     summary: Optional[str] = None
+    updated_at: Optional[datetime] = None
 
     @classmethod
     def from_mongo(cls, doc: dict) -> "ScheduleEvent":
@@ -39,6 +41,15 @@ class ScheduleEventCreate(MongoModel):
     title: str
     start_time: datetime
     end_time: datetime
+    description: Optional[str] = None
+    location: Optional[str] = None
+    summary: Optional[str] = None
+
+
+class ScheduleEventUpdate(MongoModel):
+    title: Optional[str] = None
+    start_time: Optional[datetime] = None
+    end_time: Optional[datetime] = None
     description: Optional[str] = None
     location: Optional[str] = None
     summary: Optional[str] = None

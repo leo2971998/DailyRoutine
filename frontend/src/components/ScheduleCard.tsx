@@ -3,17 +3,23 @@ import {
   AvatarGroup,
   Badge,
   Box,
+  IconButton,
   Skeleton,
   Stack,
   Text,
   VStack,
+  useDisclosure,
   useColorModeValue,
 } from '@chakra-ui/react';
 import dayjs from 'dayjs';
 import advancedFormat from 'dayjs/plugin/advancedFormat';
 import localizedFormat from 'dayjs/plugin/localizedFormat';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useSchedule } from '@/hooks/useSchedule';
+import AISidekick from './AISidekick';
+import { api } from '@/lib/api-client';
+import { env } from '@/lib/env';
 import type { ScheduleEvent } from '@/types';
 import CardContainer from './ui/CardContainer';
 
@@ -26,6 +32,10 @@ type ScheduleCardProps = {
 
 const ScheduleCard = ({ layout }: ScheduleCardProps) => {
   const { data: events = [], isLoading } = useSchedule();
+  const aiDisclosure = useDisclosure();
+  const [activeEvent, setActiveEvent] = useState<ScheduleEvent | null>(null);
+  const queryClient = useQueryClient();
+  const apiBase = api.defaults.baseURL ?? env.API_URL;
 
   return (
     <CardContainer surface="muted" h="100%">
@@ -64,7 +74,16 @@ const ScheduleCard = ({ layout }: ScheduleCardProps) => {
         ) : (
           <VStack spacing={4} align="stretch">
             {events.map((event, index) => (
-              <EventCard key={event._id} event={event} layout={layout} index={index} />
+              <EventCard
+                key={event._id}
+                event={event}
+                layout={layout}
+                index={index}
+                onOpenSidekick={(selected) => {
+                  setActiveEvent(selected);
+                  aiDisclosure.onOpen();
+                }}
+              />
             ))}
           </VStack>
         )}
@@ -76,6 +95,32 @@ const ScheduleCard = ({ layout }: ScheduleCardProps) => {
         backgroundImage="radial-gradient(circle at 18% 22%, rgba(249, 115, 22, 0.18), transparent 60%)"
         pointerEvents="none"
       />
+      {activeEvent && (
+        <AISidekick
+          isOpen={aiDisclosure.isOpen}
+          onClose={() => {
+            aiDisclosure.onClose();
+            setActiveEvent(null);
+          }}
+          apiBase={apiBase}
+          userId={activeEvent.user_id ?? env.DEMO_USER_ID}
+          entityType="schedule"
+          entityData={activeEvent}
+          intent="schedule_optimize"
+          onApply={async (patch) => {
+            if (!activeEvent) {
+              throw new Error('No event selected');
+            }
+            const endpoint = patch.endpoint.replace('{id}', activeEvent._id);
+            await api.request({
+              url: endpoint,
+              method: patch.method,
+              data: patch.body,
+            });
+            await queryClient.invalidateQueries({ queryKey: ['schedule'] });
+          }}
+        />
+      )}
     </CardContainer>
   );
 };
@@ -84,9 +129,10 @@ type EventCardProps = {
   event: ScheduleEvent;
   layout: 'row' | 'column';
   index: number;
+  onOpenSidekick: (event: ScheduleEvent) => void;
 };
 
-const EventCard = ({ event, layout, index }: EventCardProps) => {
+const EventCard = ({ event, layout, index, onOpenSidekick }: EventCardProps) => {
   const accent = useColorModeValue('bg.secondary', 'whiteAlpha.100');
   const border = useColorModeValue('border.subtle', 'whiteAlpha.200');
   const date = dayjs(event.start_time).format('ddd, MMM D • h:mm A');
@@ -104,7 +150,19 @@ const EventCard = ({ event, layout, index }: EventCardProps) => {
       borderColor={border}
       boxShadow="0 10px 28px rgba(217, 119, 6, 0.16)"
       transform={`rotate(${rotation})`}
+      position="relative"
     >
+      <IconButton
+        aria-label="Improve event with AI"
+        icon={<span role="img" aria-hidden="true">✨</span>}
+        size="sm"
+        variant="ghost"
+        position="absolute"
+        top={3}
+        right={3}
+        onClick={() => onOpenSidekick(event)}
+        zIndex={2}
+      />
       <Stack direction={layout} spacing={0} align="stretch">
         <Box
           flex={layout === 'row' ? '0 0 45%' : undefined}

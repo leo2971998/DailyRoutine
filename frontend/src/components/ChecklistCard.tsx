@@ -3,6 +3,7 @@ import {
   Box,
   Button,
   Checkbox,
+  IconButton,
   FormControl,
   FormLabel,
   Grid,
@@ -15,12 +16,17 @@ import {
   Text,
   VStack,
   useColorModeValue,
+  useDisclosure,
   useToast,
 } from '@chakra-ui/react';
 import dayjs from 'dayjs';
 import { FormEvent, useMemo, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { FiClock } from 'react-icons/fi';
 import { useTasks, useToggleTask, useCreateTask } from '@/hooks/useTasks';
+import AISidekick from './AISidekick';
+import { api } from '@/lib/api-client';
+import { env } from '@/lib/env';
 import type { Task } from '@/types';
 import CardContainer from './ui/CardContainer';
 
@@ -38,9 +44,13 @@ const ChecklistCard = () => {
   const [dueDate, setDueDate] = useState('');
   const [priority, setPriority] = useState<'high' | 'medium' | 'low'>('medium');
   const toast = useToast();
+  const aiDisclosure = useDisclosure();
+  const [activeTask, setActiveTask] = useState<Task | null>(null);
+  const queryClient = useQueryClient();
   const rowBg = 'surface.cardMuted';
   const rowBorder = 'border.subtle';
   const inputBg = useColorModeValue('white', 'rgba(255,255,255,0.05)');
+  const apiBase = api.defaults.baseURL ?? env.API_URL;
 
   const grouped = useMemo(() => {
     return tasks.reduce<Record<'high' | 'medium' | 'low', Task[]>>(
@@ -183,8 +193,10 @@ const ChecklistCard = () => {
                         bg={rowBg}
                         borderWidth="1px"
                         borderColor={rowBorder}
+                        align="center"
                       >
                         <Checkbox
+                          flex="1"
                           isChecked={task.is_completed}
                           onChange={(event) =>
                             toggleTask.mutate({ taskId: task._id, is_completed: event.target.checked })
@@ -210,6 +222,16 @@ const ChecklistCard = () => {
                             </HStack>
                           </Stack>
                         </Checkbox>
+                        <IconButton
+                          aria-label="Improve with AI"
+                          icon={<span role="img" aria-hidden="true">✨</span>}
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            setActiveTask(task);
+                            aiDisclosure.onOpen();
+                          }}
+                        />
                       </HStack>
                     ))}
                   </Stack>
@@ -218,6 +240,32 @@ const ChecklistCard = () => {
           </VStack>
         )}
       </Stack>
+      {activeTask && (
+        <AISidekick
+          isOpen={aiDisclosure.isOpen}
+          onClose={() => {
+            aiDisclosure.onClose();
+            setActiveTask(null);
+          }}
+          apiBase={apiBase}
+          userId={activeTask.user_id ?? env.DEMO_USER_ID}
+          entityType="task"
+          entityData={activeTask}
+          intent="task_improve"
+          onApply={async (patch) => {
+            if (!activeTask) {
+              throw new Error('No task selected');
+            }
+            const endpoint = patch.endpoint.replace('{id}', activeTask._id);
+            await api.request({
+              url: endpoint,
+              method: patch.method,
+              data: patch.body,
+            });
+            await queryClient.invalidateQueries({ queryKey: ['tasks'] });
+          }}
+        />
+      )}
     </CardContainer>
   );
 };
