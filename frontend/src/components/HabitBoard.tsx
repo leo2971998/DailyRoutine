@@ -278,7 +278,7 @@ const handleLogHabit = (
   mutation.mutate(
     {
       habit_id: habit._id,
-      date: new Date().toISOString(),
+      date: dayjs().format('YYYY-MM-DD'),
       status,
       completed_repetitions: status === 'completed' ? 1 : 0,
     },

@@ -3,29 +3,67 @@ import {
   Button,
   ButtonGroup,
   Flex,
+  FormControl,
+  FormErrorMessage,
+  FormLabel,
   Heading,
   HStack,
   Icon,
+  Input,
+  Modal,
+  ModalBody,
+  ModalCloseButton,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+  ModalOverlay,
   SimpleGrid,
   Skeleton,
   Stack,
   Text,
+  useDisclosure,
+  useToast,
 } from '@chakra-ui/react';
 import dayjs from 'dayjs';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { FiChevronRight, FiMap, FiSun, FiTrendingUp } from 'react-icons/fi';
-import type { ProgressSummary, User } from '@/types';
+import type { Habit, HabitLog, ProgressSummary, Task, User } from '@/types';
 
 type GreetingCardProps = {
   user?: User;
-  progress: ProgressSummary;
+  tasks: Task[];
+  completedTasks: Task[];
+  habits: Habit[];
+  habitLogs: HabitLog[];
   isLoading: boolean;
 };
 
-const quickActions = ['Today', 'Week', 'Custom'];
+const quickActions = [
+  { label: 'Today', value: 'today' },
+  { label: 'Week', value: 'week' },
+  { label: 'Custom', value: 'custom' },
+] as const;
 
-const GreetingCard = ({ user, progress, isLoading }: GreetingCardProps) => {
+type QuickActionValue = (typeof quickActions)[number]['value'];
+
+const GreetingCard = ({
+  user,
+  tasks,
+  completedTasks,
+  habits,
+  habitLogs,
+  isLoading,
+}: GreetingCardProps) => {
   const formattedDate = useMemo(() => dayjs().format('dddd, D MMMM YYYY'), []);
+  const [selectedAction, setSelectedAction] = useState<QuickActionValue>('today');
+  const [customRange, setCustomRange] = useState(() => ({
+    start: dayjs().startOf('day').format('YYYY-MM-DD'),
+    end: dayjs().endOf('day').format('YYYY-MM-DD'),
+  }));
+  const [draftRange, setDraftRange] = useState(customRange);
+  const [rangeError, setRangeError] = useState<string | null>(null);
+  const customRangeModal = useDisclosure();
+  const toast = useToast();
   const greeting = useMemo(() => {
     const hour = dayjs().hour();
     const name = user?.name?.split(' ')[0] ?? 'there';
@@ -34,20 +72,104 @@ const GreetingCard = ({ user, progress, isLoading }: GreetingCardProps) => {
     return `Good evening, ${name}!`;
   }, [user?.name]);
 
+  const activeRange = useMemo(() => {
+    if (selectedAction === 'week') {
+      return {
+        start: dayjs().startOf('day').subtract(6, 'day'),
+        end: dayjs().endOf('day'),
+      };
+    }
+
+    if (selectedAction === 'custom') {
+      return {
+        start: dayjs(customRange.start).startOf('day'),
+        end: dayjs(customRange.end).endOf('day'),
+      };
+    }
+
+    return {
+      start: dayjs().startOf('day'),
+      end: dayjs().endOf('day'),
+    };
+  }, [selectedAction, customRange.end, customRange.start]);
+
+  const progress = useMemo(() => {
+    return buildProgressSummary({
+      tasks,
+      completedTasks,
+      habits,
+      habitLogs,
+      range: activeRange,
+    });
+  }, [activeRange, tasks, completedTasks, habits, habitLogs]);
+
   const stats = [
     {
       label: 'Tasks',
-      value: `${progress.tasks_completed}/${Math.max(progress.tasks_total, progress.tasks_completed)}`,
+      value: `${progress.tasks_completed}/${progress.tasks_total || progress.tasks_completed || 0}`,
     },
     {
       label: 'Habits',
-      value: `${progress.habits_completed}/${Math.max(progress.habits_total, progress.habits_completed)}`,
+      value: `${progress.habits_completed}/${progress.habits_total || progress.habits_completed || 0}`,
     },
     {
       label: 'Focus score',
       value: calculateFocusScore(progress),
     },
   ];
+
+  const rangeLabel = useMemo(() => {
+    if (selectedAction === 'week') {
+      return 'Past 7 days';
+    }
+    if (selectedAction === 'custom') {
+      const start = dayjs(customRange.start).format('MMM D, YYYY');
+      const end = dayjs(customRange.end).format('MMM D, YYYY');
+      return `${start} – ${end}`;
+    }
+    return 'Today';
+  }, [customRange.end, customRange.start, selectedAction]);
+
+  const handleActionSelect = (action: QuickActionValue) => {
+    if (action === 'custom') {
+      setDraftRange(customRange);
+      setRangeError(null);
+      customRangeModal.onOpen();
+      return;
+    }
+    setSelectedAction(action);
+  };
+
+  const handleCustomRangeChange = (field: 'start' | 'end', value: string) => {
+    setDraftRange((prev) => ({ ...prev, [field]: value }));
+    setRangeError(null);
+  };
+
+  const closeCustomModal = () => {
+    customRangeModal.onClose();
+    setDraftRange(customRange);
+    setRangeError(null);
+  };
+
+  const applyCustomRange = () => {
+    if (!draftRange.start || !draftRange.end) {
+      setRangeError('Please select both a start and end date.');
+      return;
+    }
+
+    const start = dayjs(draftRange.start);
+    const end = dayjs(draftRange.end);
+
+    if (start.isAfter(end)) {
+      setRangeError('Start date must be before end date.');
+      return;
+    }
+
+    setCustomRange({ start: draftRange.start, end: draftRange.end });
+    setSelectedAction('custom');
+    customRangeModal.onClose();
+    toast({ title: 'Custom range applied', status: 'success', duration: 2500, isClosable: true });
+  };
 
   return (
     <Box
@@ -135,21 +257,71 @@ const GreetingCard = ({ user, progress, isLoading }: GreetingCardProps) => {
           ))}
         </SimpleGrid>
 
-        <ButtonGroup size="sm" variant="solid" colorScheme="blackAlpha">
+        <Text fontSize="sm" color="whiteAlpha.800" fontWeight="medium">
+          Showing: {rangeLabel}
+        </Text>
+
+        <ButtonGroup size="sm" variant="solid">
           {quickActions.map((action) => (
             <Button
-              key={action}
+              key={action.value}
               borderRadius="full"
-              bg="rgba(255, 255, 255, 0.25)"
+              bg={
+                selectedAction === action.value
+                  ? 'rgba(30, 41, 59, 0.7)'
+                  : 'rgba(30, 41, 59, 0.45)'
+              }
               color="white"
               backdropFilter="blur(6px)"
-              _hover={{ bg: 'rgba(255, 255, 255, 0.35)' }}
+              _hover={{ bg: 'rgba(30, 41, 59, 0.75)' }}
+              _active={{ bg: 'rgba(30, 41, 59, 0.85)' }}
               rightIcon={<FiChevronRight />}
+              onClick={() => handleActionSelect(action.value)}
+              aria-pressed={selectedAction === action.value}
             >
-              {action}
+              {action.label}
             </Button>
           ))}
         </ButtonGroup>
+
+        <Modal isOpen={customRangeModal.isOpen} onClose={closeCustomModal} isCentered>
+          <ModalOverlay />
+          <ModalContent>
+            <ModalHeader>Select custom range</ModalHeader>
+            <ModalCloseButton />
+            <ModalBody>
+              <Stack spacing={4}>
+                <FormControl isInvalid={!!rangeError}>
+                  <FormLabel>Start date</FormLabel>
+                  <Input
+                    type="date"
+                    value={draftRange.start}
+                    onChange={(event) => handleCustomRangeChange('start', event.target.value)}
+                  />
+                </FormControl>
+                <FormControl isInvalid={!!rangeError}>
+                  <FormLabel>End date</FormLabel>
+                  <Input
+                    type="date"
+                    value={draftRange.end}
+                    onChange={(event) => handleCustomRangeChange('end', event.target.value)}
+                  />
+                  {rangeError ? <FormErrorMessage>{rangeError}</FormErrorMessage> : null}
+                </FormControl>
+              </Stack>
+            </ModalBody>
+            <ModalFooter>
+              <HStack spacing={3}>
+                <Button variant="ghost" onClick={closeCustomModal}>
+                  Cancel
+                </Button>
+                <Button colorScheme="orange" onClick={applyCustomRange}>
+                  Apply
+                </Button>
+              </HStack>
+            </ModalFooter>
+          </ModalContent>
+        </Modal>
       </Stack>
     </Box>
   );
@@ -168,6 +340,78 @@ const StatCard = ({ label, value }: StatCardProps) => (
     {value ? <Heading size="lg">{value}</Heading> : <Skeleton height="28px" width="120px" />}
   </Stack>
 );
+
+type ProgressSummaryParams = {
+  tasks: Task[];
+  completedTasks: Task[];
+  habits: Habit[];
+  habitLogs: HabitLog[];
+  range: {
+    start: dayjs.Dayjs;
+    end: dayjs.Dayjs;
+  };
+};
+
+const buildProgressSummary = ({
+  tasks,
+  completedTasks,
+  habits,
+  habitLogs,
+  range,
+}: ProgressSummaryParams): ProgressSummary => {
+  const { start, end } = range;
+
+  if (!start || !end) {
+    return {
+      tasks_completed: completedTasks.length,
+      tasks_total: completedTasks.length + tasks.length,
+      habits_completed: habitLogs.filter((log) => log.status === 'completed').length,
+      habits_total: habits.length,
+    };
+  }
+
+  const completedInRange = completedTasks.filter((task) => {
+    const completedAt = task.updated_at ?? task.due_date ?? task.created_at;
+    return completedAt ? isWithinRange(dayjs(completedAt), start, end) : false;
+  });
+
+  const includesToday = isWithinRange(dayjs(), start, end);
+
+  const pendingInRange = tasks.filter((task) => {
+    if (!task.due_date) {
+      return includesToday;
+    }
+    return isWithinRange(dayjs(task.due_date), start, end);
+  });
+
+  const completionKeys = new Set<string>();
+  habitLogs.forEach((log) => {
+    if (log.status !== 'completed') return;
+    const logDate = dayjs(log.date);
+    if (isWithinRange(logDate, start, end)) {
+      const key = `${log.habit_id}-${logDate.format('YYYY-MM-DD')}`;
+      completionKeys.add(key);
+    }
+  });
+
+  const dayCount = Math.max(end.startOf('day').diff(start.startOf('day'), 'day') + 1, 1);
+
+  const summary: ProgressSummary = {
+    tasks_completed: completedInRange.length,
+    tasks_total: completedInRange.length + pendingInRange.length,
+    habits_completed: completionKeys.size,
+    habits_total: habits.length * dayCount,
+  };
+
+  return summary;
+};
+
+const isWithinRange = (value: dayjs.Dayjs, start: dayjs.Dayjs, end: dayjs.Dayjs) => {
+  const target = value.startOf('day').valueOf();
+  const rangeStart = start.startOf('day').valueOf();
+  const rangeEnd = end.startOf('day').valueOf();
+  return target >= rangeStart && target <= rangeEnd;
+};
 
 const calculateFocusScore = (progress: ProgressSummary) => {
   const total = progress.tasks_total + progress.habits_total;

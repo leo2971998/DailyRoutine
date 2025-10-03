@@ -1,8 +1,7 @@
 import { Grid, GridItem } from '@chakra-ui/react';
-import { useMemo } from 'react';
 import GreetingCard from '../GreetingCard';
 import AIPlanCard from '../AIPlanCard';
-import type { Habit, HabitLog, Task, User, ProgressSummary } from '@/types';
+import type { Habit, HabitLog, Task, User } from '@/types';
 import { useTasks } from '@/hooks/useTasks';
 import { useHabitLogs } from '@/hooks/useHabits';
 import { useSchedule } from '@/hooks/useSchedule';
@@ -22,26 +21,20 @@ const OverviewTab = ({ user, tasks, habits, isTasksLoading, isHabitsLoading }: O
   const { data: habitLogs = [], isLoading: isHabitLogsLoading } = useHabitLogs();
   const { data: scheduleEvents = [], isLoading: isScheduleLoading } = useSchedule();
 
-  const progress = useMemo<ProgressSummary>(() => {
-    const todaysLogs = getTodaysHabitLogs(habitLogs);
-    const completedHabitIds = new Set(
-      todaysLogs.filter((log) => log.status === 'completed').map((log) => log.habit_id)
-    );
-    return {
-      tasks_completed: completedTasks.length,
-      tasks_total: completedTasks.length + tasks.length,
-      habits_completed: [...completedHabitIds].length,
-      habits_total: habits.length,
-    };
-  }, [completedTasks.length, habitLogs, habits.length, tasks.length]);
-
   const summaryLoading =
     isTasksLoading || isHabitsLoading || isCompletedLoading || isHabitLogsLoading || isScheduleLoading;
 
   return (
     <Grid templateColumns={{ base: '1fr', lg: 'repeat(6, 1fr)' }} gap={{ base: 6, lg: 8 }} alignItems="stretch">
       <GridItem colSpan={{ base: 1, lg: 4 }}>
-        <GreetingCard user={user} progress={progress} isLoading={summaryLoading} />
+        <GreetingCard
+          user={user}
+          tasks={tasks}
+          completedTasks={completedTasks}
+          habits={habits}
+          habitLogs={habitLogs}
+          isLoading={summaryLoading}
+        />
       </GridItem>
       <GridItem colSpan={{ base: 1, lg: 2 }}>
         <AIPlanCard
@@ -55,10 +48,5 @@ const OverviewTab = ({ user, tasks, habits, isTasksLoading, isHabitsLoading }: O
     </Grid>
   );
 };
-
-function getTodaysHabitLogs(logs: HabitLog[]) {
-  const today = new Date().toISOString().slice(0, 10);
-  return logs.filter((log) => log.date.slice(0, 10) === today);
-}
 
 export default OverviewTab;
