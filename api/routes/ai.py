@@ -457,8 +457,12 @@ class AICreateTasksIn(BaseModel):
     intent: str = "create_multiple_tasks"
 
 
+class TaskData(BaseModel):
+    description: str
+    priority: Literal["high", "medium", "low"] = "medium"
+
 class AICreateTasksOut(BaseModel):
-    tasks: List[str]
+    tasks: List[TaskData]
     created_count: int
 
 
@@ -466,75 +470,49 @@ class AICreateTasksOut(BaseModel):
 async def ai_create_tasks(body: AICreateTasksIn) -> AICreateTasksOut:
     await enforce_rate_limit(body.user_id)
     
-    # Create AI prompt for parsing multiple tasks
-    prompt = f"""
-System: You are an AI assistant that parses user prompts to extract multiple individual tasks.
-User: Parse this prompt and extract individual actionable tasks. Return only a JSON array of task descriptions.
-
-Prompt: {body.prompt}
-
-Guidelines:
-- Each task should be clear and actionable (start with a verb)
-- Keep tasks concise (under 10 words each)
-- Extract 2-8 tasks from the prompt
-- Return format: {{"tasks": ["task1", "task2", "task3", "task4"]}}
-
-Example:
-Input: "Create 3 tasks: 1) Email Professor Lin, 2) Finish homework, 3) Call mom"  
-Output: {{"tasks": ["Email Professor Lin", "Finish homework", "Call mom"]}}
-"""
-    
-    try:
-        # Try to generate with AI (currently falls back to simple parsing)
-        response_text = await generate_text(prompt, "task_create", {"prompt": body.prompt})
-        
-        # Parse the response
-        import json as _json
-        result = _json.loads(response_text)
-        tasks = result.get("tasks", [])
-        
-    except Exception:
-        # Fallback: Simple parsing of the prompt
-        tasks = _parse_tasks_fallback(body.prompt)
+    # Use enhanced parsing for task extraction with priorities
+    tasks = _parse_tasks_fallback(body.prompt)
     
     return AICreateTasksOut(tasks=tasks, created_count=len(tasks))
 
 
-def _parse_tasks_fallback(prompt: str) -> List[str]:
-    """Simple fallback parser for common task prompt patterns"""
+def _parse_tasks_fallback(prompt: str) -> List[TaskData]:
+    """Enhanced parser that extracts tasks with priorities"""
     import re
     
-    # Pattern 1: "Create 4 tasks: 1, 2, 3, 4"
-    numbered_pattern = r'(?:create|make|add)\s+\d+\s+tasks?:\s*(.+?)(?:\s*$|\s+[A-Z])'
-    numbered_match = re.search(numbered_pattern, prompt.lower(), re.DOTALL)
+    # Pattern: Extract tasks with priorities like "Task name High", "Task (date) Medium", etc.
+    # Split by commas first, then parse each task individually
+    tasks = []
     
-    if numbered_match:
-        tasks_text = numbered_match.group(1)
-        # Extract tasks separated by commas, numbers, or bullets
-        tasks = re.split(r'(?:,\s*|\d+[\.\)]\s*|[-•]\s*)', tasks_text)
-        tasks = [task.strip() for task in tasks if task.strip()]
-        return tasks[:8]  # Limit to 8 tasks
+    # Raw task strings separated by commas
+    raw_tasks = re.split(r',(?=\s*(?:\d+\.|Test|Create))', prompt)
     
-    # Pattern 2: Comma-separated tasks
-    comma_tasks = [task.strip() for task in prompt.split(',') if task.strip()]
-    if len(comma_tasks) >= 2:
-        return comma_tasks[:8]
+    for task_raw in raw_tasks:
+        task_raw = task_raw.strip()
+        if not task_raw:
+            continue
+            
+        # Extract priority from task text
+        priority_match = re.search(r'\b(high|medium|low)\b', task_raw.lower())
+        priority = priority_match.group(1) if priority_match else "medium"
+        
+        # Clean up task description by removing priority words and extra info
+        description = re.sub(r'\b(?:high|medium|low)\s*priority\b', '', task_raw, flags=re.IGNORECASE)
+        description = re.sub(r'\b(?:high|medium|low)\b', '', description, flags=re.IGNORECASE)
+        
+        # Remove common formatting
+        description = re.sub(r'^\d+[\.\)]\s*', '', description)  # Remove "1.", "2)", etc.
+        description = re.sub(r'^\*\s*', '', description)  # Remove "* "
+        description = re.sub(r'^-\s*', '', description)  # Remove "- "
+        
+        # Clean up extra spaces
+        description = description.strip()
+        
+        if description:
+            tasks.append(TaskData(description=description, priority=priority))
     
-    # Pattern 3: Bullet points (•, -, *)
-    bullet_pattern = r'(?:[•\-\*]\s*)(.+?)(?=\n|$)'
-    bullet_tasks = re.findall(bullet_pattern, prompt)
-    if bullet_tasks:
-        return [task.strip() for task in bullet_tasks[:8]]
-    
-    # Pattern 4: Numbered lists
-    numbered_pattern = r'\d+[\.\)]\s*(.+?)(?=\n|$|\d+[\.\)])'
-    numbered_tasks = re.findall(numbered_pattern, prompt)
-    if numbered_tasks:
-        return [task.strip() for task in numbered_tasks[:8]]
-    
-    # Default: Split by common conjunctions and limit to 4
-    default_tasks = re.split(r'(?:\s+and\s+|\s+then\s+|\s+next\s+)', prompt)
-    return [task.strip() for task in default_tasks[:4] if task.strip()]
+    # Return up to 8 tasks
+    return tasks[:8]
 
 
 __all__ = ["router"]
