@@ -229,9 +229,9 @@ const HabitCard = ({ habit, onLog, isLogging, onOpenSidekick }: HabitCardProps) 
         </Text>
       </Stack>
       <Progress value={percent} borderRadius="full" colorScheme="orange" bg="rgba(251, 191, 36, 0.2)" />
-      <Box h="120px" position="relative" zIndex={1}>
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData}>
+      <Box h="120px" position="relative" zIndex={1} minHeight="120px">
+        <ResponsiveContainer width="100%" height="100%" minHeight={120}>
+          <BarChart data={chartData} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
             <Tooltip cursor={{ fill: 'rgba(249, 115, 22, 0.12)' }} contentStyle={tooltipStyles} />
             <XAxis dataKey="day" axisLine={false} tickLine={false} stroke="rgba(148, 163, 184, 0.9)" />
             <YAxis hide domain={[0, Math.max(...chartData.map((d) => d.value), habit.goal_repetitions)]} />

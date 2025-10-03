@@ -108,6 +108,24 @@ export function useToggleTask() {
     })
 }
 
+type UpdateTaskVariables = {
+    taskId: string
+    updates: Partial<Pick<Task, 'description' | 'priority' | 'due_date'>>
+}
+
+export function useUpdateTask() {
+    const qc = useQueryClient()
+    return useMutation({
+        mutationFn: async ({ taskId, updates }: UpdateTaskVariables) => {
+            const { data } = await api.patch<Task>(`/tasks/${taskId}`, updates)
+            return data
+        },
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: ['tasks'] })
+        },
+    })
+}
+
 export function useDeleteTask() {
     const qc = useQueryClient()
     return useMutation({

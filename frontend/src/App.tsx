@@ -18,13 +18,14 @@ import {
   useColorModeValue
 } from '@chakra-ui/react';
 import { useMemo, useState } from 'react';
-import { FiCalendar, FiGrid, FiHeart, FiMic, FiSearch, FiTarget, FiStar } from 'react-icons/fi';
+import { FiCalendar, FiGrid, FiHeart, FiMic, FiSearch, FiTarget, FiStar, FiCheckSquare } from 'react-icons/fi';
 import OverviewTab from './components/tabs/OverviewTab';
 import HabitsTab from './components/tabs/HabitsTab';
 import ScheduleTab from './components/tabs/ScheduleTab';
 import SocialTab from './components/tabs/SocialTab';
 import InsightsTab from './components/tabs/InsightsTab';
 import AlexaTab from './components/tabs/AlexaTab';
+import DailyRoutineTab from './components/tabs/DailyRoutineTab';
 import { useDemoUser } from '@/hooks/useDemoUser';
 import { useTasks } from '@/hooks/useTasks';
 import { useHabits } from '@/hooks/useHabits';
@@ -32,11 +33,12 @@ import { env } from '@/lib/env';
 
 const TABS = [
   { id: 'overview', label: 'Overview', icon: FiGrid },
-  { id: 'habits', label: 'Habits & Log', icon: FiTarget },
+  { id: 'tasks', label: 'Tasks', icon: FiCheckSquare },
+  { id: 'habits', label: 'Habits', icon: FiTarget },
   { id: 'schedule', label: 'Schedule', icon: FiCalendar },
-  { id: 'insights', label: 'AI Insights', icon: FiStar },
-  { id: 'alexa', label: 'Alexa Test', icon: FiMic },
-  { id: 'together', label: 'Together', icon: FiHeart }
+  { id: 'insights', label: 'Insights', icon: FiStar },
+  { id: 'alexa', label: 'Voice', icon: FiMic },
+  { id: 'social', label: 'Social', icon: FiHeart }
 ] as const;
 
 function App() {
@@ -210,6 +212,9 @@ function App() {
                   tasks={incompleteTasks}
                   habits={habits}
                 />
+              </TabPanel>
+              <TabPanel px={0}>
+                <DailyRoutineTab user={user} />
               </TabPanel>
               <TabPanel px={0}>
                 <HabitsTab />

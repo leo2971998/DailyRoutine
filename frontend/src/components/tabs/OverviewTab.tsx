@@ -1,10 +1,7 @@
 import { Grid, GridItem } from '@chakra-ui/react';
 import { useMemo } from 'react';
-import ChecklistCard from '../ChecklistCard';
 import GreetingCard from '../GreetingCard';
-import ProgressPanel from '../ProgressPanel';
 import AIPlanCard from '../AIPlanCard';
-import BacklogHealerCard from '../BacklogHealerCard';
 import type { Habit, HabitLog, Task, User, ProgressSummary } from '@/types';
 import { useTasks } from '@/hooks/useTasks';
 import { useHabitLogs } from '@/hooks/useHabits';
@@ -42,12 +39,9 @@ const OverviewTab = ({ user, tasks, habits, isTasksLoading, isHabitsLoading }: O
     isTasksLoading || isHabitsLoading || isCompletedLoading || isHabitLogsLoading || isScheduleLoading;
 
   return (
-    <Grid templateColumns={{ base: '1fr', lg: 'repeat(5, 1fr)' }} gap={{ base: 6, lg: 8 }} alignItems="stretch">
-      <GridItem colSpan={{ base: 1, lg: 3 }}>
+    <Grid templateColumns={{ base: '1fr', lg: 'repeat(6, 1fr)' }} gap={{ base: 6, lg: 8 }} alignItems="stretch">
+      <GridItem colSpan={{ base: 1, lg: 4 }}>
         <GreetingCard user={user} progress={progress} isLoading={summaryLoading} />
-      </GridItem>
-      <GridItem colSpan={{ base: 1, lg: 2 }}>
-        <ProgressPanel progress={progress} isLoading={summaryLoading} />
       </GridItem>
       <GridItem colSpan={{ base: 1, lg: 2 }}>
         <AIPlanCard
@@ -57,12 +51,6 @@ const OverviewTab = ({ user, tasks, habits, isTasksLoading, isHabitsLoading }: O
           userId={user?._id}
           isLoading={summaryLoading}
         />
-      </GridItem>
-      <GridItem colSpan={{ base: 1, lg: 3 }}>
-        <ChecklistCard />
-      </GridItem>
-      <GridItem colSpan={{ base: 1, lg: 2 }}>
-        <BacklogHealerCard userId={user?._id} />
       </GridItem>
     </Grid>
   );

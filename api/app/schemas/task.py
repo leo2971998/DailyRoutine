@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List, Literal, Optional
 
-from pydantic import Field
+from pydantic import Field, field_validator
 
 from .common import MongoModel, PyObjectId
 
@@ -14,8 +14,16 @@ class TaskSubtask(MongoModel):
     duration_minutes: Optional[int] = None
     due_at: Optional[datetime] = None
     is_completed: bool = False
-    created_at: datetime
-    updated_at: datetime
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    
+    @field_validator('duration_minutes', mode='before')
+    @classmethod
+    def fix_duration_field_name(cls, v, info):
+        # Handle legacy field name 'duration_min' from database
+        if 'duration_min' in info.data:
+            return info.data['duration_min']
+        return v
 
 
 class Task(MongoModel):
@@ -26,8 +34,17 @@ class Task(MongoModel):
     due_date: Optional[datetime] = None
     priority: Priority = "medium"
     created_at: datetime
-    updated_at: datetime
+    updated_at: Optional[datetime] = None
     subtasks: List[TaskSubtask] = Field(default_factory=list)
+    
+    @field_validator('priority', mode='before')
+    @classmethod
+    def convert_priority_int_to_str(cls, v):
+        """Convert integer priority values to string literals."""
+        if isinstance(v, int):
+            priority_map = {0: "low", 1: "medium", 2: "high"}
+            return priority_map.get(v, "medium")
+        return v
 
 
 class TaskCreate(MongoModel):

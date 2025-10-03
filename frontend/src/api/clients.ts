@@ -68,26 +68,6 @@ export type SubtaskBulkResponse = {
   items: Subtask[];
 };
 
-export type ReplanTasksPayload = {
-  user_id: string;
-  strategy?: 'next_free' | 'push_days';
-  dry_run?: boolean;
-  horizon_days?: number;
-  block_minutes?: number;
-};
-
-export type ReplanProposal = {
-  task_id: string;
-  old_due_date?: string | null;
-  new_due_date: string;
-  reason: string;
-};
-
-export type ReplanTasksResponse = {
-  proposals: ReplanProposal[];
-  applied: number;
-};
-
 export type HabitCoachPayload = {
   signal: 'too_easy' | 'just_right' | 'too_hard';
 };
@@ -116,11 +96,6 @@ export async function createSubtasks(
   payload: SubtaskBulkPayload
 ): Promise<SubtaskBulkResponse> {
   const { data } = await api.post<SubtaskBulkResponse>(`/tasks/${taskId}/subtasks/bulk`, payload);
-  return data;
-}
-
-export async function replanTasks(payload: ReplanTasksPayload): Promise<ReplanTasksResponse> {
-  const { data } = await api.post<ReplanTasksResponse>('/tasks/replan', payload);
   return data;
 }
 
