@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react'
-import { Box, Stack, VStack, HStack, Button, Text, useBreakpointValue, useDisclosure, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalFooter, Textarea, useToast } from '@chakra-ui/react'
+import { Box, Stack, VStack, HStack, Button, Text, useBreakpointValue, useDisclosure, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalFooter, ModalCloseButton, Textarea, Input, Select, FormControl, FormLabel, useToast } from '@chakra-ui/react'
 import dayjs from 'dayjs'
-import { FiStar } from 'react-icons/fi'
+import { FiStar, FiPlus } from 'react-icons/fi'
 import type { Task } from '@/types'
 import { useTasks, useToggleTask, useCreateTask, useUpdateTask, useDeleteTask } from '@/hooks/useTasks'
 import TaskGroup from './TaskGroup'
@@ -18,8 +18,12 @@ export default function StackedTasksBoard() {
   const isMobile = useBreakpointValue({ base: true, md: false })
 
   const aiPromptDisclosure = useDisclosure()
+  const manualCreateDisclosure = useDisclosure()
   const [aiPrompt, setAiPrompt] = useState('')
   const [isCreatingFromAI, setIsCreatingFromAI] = useState(false)
+  const [newTaskDescription, setNewTaskDescription] = useState('')
+  const [newTaskDueDate, setNewTaskDueDate] = useState('')
+  const [newTaskPriority, setNewTaskPriority] = useState<Task['priority']>('medium')
 
   const now = new Date()
   const isToday = (iso?: string | null) => iso ? dayjs(iso).isSame(now, 'day') : false
@@ -34,7 +38,7 @@ export default function StackedTasksBoard() {
   }), [allTasks])
 
   const handleComplete = (task: Task) => {
-    toggleTask.mutate(task._id)
+    toggleTask.mutate({ taskId: task._id, is_completed: !task.is_completed })
   }
 
   const handleSnooze = (task: Task) => {
@@ -50,6 +54,43 @@ export default function StackedTasksBoard() {
 
   const handleDelete = (task: Task) => {
     deleteTask.mutate(task._id)
+  }
+
+  const resetManualForm = () => {
+    setNewTaskDescription('')
+    setNewTaskDueDate('')
+    setNewTaskPriority('medium')
+  }
+
+  const handleManualCreateClose = () => {
+    resetManualForm()
+    manualCreateDisclosure.onClose()
+  }
+
+  const handleCreateTaskManually = () => {
+    const description = newTaskDescription.trim()
+    if (!description) {
+      toast({ title: 'Please enter a task description', status: 'warning' })
+      return
+    }
+
+    createTask.mutate(
+      {
+        description,
+        due_date: newTaskDueDate ? dayjs(newTaskDueDate).endOf('day').toISOString() : null,
+        priority: newTaskPriority,
+      },
+      {
+        onSuccess: () => {
+          toast({ title: 'Task added', status: 'success' })
+          resetManualForm()
+          manualCreateDisclosure.onClose()
+        },
+        onError: () => {
+          toast({ title: 'Could not create task', status: 'error' })
+        },
+      }
+    )
   }
 
   const handleAICreateTasks = async () => {
@@ -70,7 +111,11 @@ export default function StackedTasksBoard() {
       const data = await res.json()
 
       for (const item of data.tasks as Array<{ description: string; priority?: 'high'|'medium'|'low' }>) {
-        await createTask.mutateAsync({ description: item.description, priority: item.priority ?? 'medium' })
+        await createTask.mutateAsync({
+          description: item.description,
+          due_date: null,
+          priority: item.priority ?? 'medium',
+        })
       }
 
       toast({ title: `Created ${data.tasks.length} tasks`, status: 'success' })
@@ -92,9 +137,30 @@ export default function StackedTasksBoard() {
 
   return (
     <VStack spacing={4} align="stretch">
-      <HStack justify="space-between">
+      <HStack justify="space-between" align="center">
         <Text fontSize="lg" fontWeight="bold">Tasks</Text>
-        <Button size="sm" colorScheme="orange" leftIcon={<FiStar />} onClick={aiPromptDisclosure.onOpen}>AI Task Creator</Button>
+        <HStack spacing={2}>
+          <Button
+            size="sm"
+            colorScheme="orange"
+            leftIcon={<FiPlus />}
+            onClick={() => {
+              resetManualForm()
+              manualCreateDisclosure.onOpen()
+            }}
+          >
+            Add Task
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            colorScheme="orange"
+            leftIcon={<FiStar />}
+            onClick={aiPromptDisclosure.onOpen}
+          >
+            AI Task Creator
+          </Button>
+        </HStack>
       </HStack>
 
       <Stack spacing={4} direction={isMobile ? 'column' : 'row'} align="stretch">
@@ -111,6 +177,49 @@ export default function StackedTasksBoard() {
           />
         ))}
       </Stack>
+
+      <Modal isOpen={manualCreateDisclosure.isOpen} onClose={handleManualCreateClose}>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Add a task</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <Stack spacing={4}>
+              <FormControl>
+                <FormLabel>Description</FormLabel>
+                <Textarea
+                  value={newTaskDescription}
+                  onChange={(e) => setNewTaskDescription(e.target.value)}
+                  rows={3}
+                  placeholder="What do you need to get done?"
+                />
+              </FormControl>
+              <FormControl>
+                <FormLabel>Due date</FormLabel>
+                <Input
+                  type="date"
+                  value={newTaskDueDate}
+                  onChange={(e) => setNewTaskDueDate(e.target.value)}
+                />
+              </FormControl>
+              <FormControl>
+                <FormLabel>Priority</FormLabel>
+                <Select value={newTaskPriority} onChange={(e) => setNewTaskPriority(e.target.value as Task['priority'])}>
+                  <option value="high">High</option>
+                  <option value="medium">Medium</option>
+                  <option value="low">Low</option>
+                </Select>
+              </FormControl>
+            </Stack>
+          </ModalBody>
+          <ModalFooter>
+            <HStack>
+              <Button variant="ghost" onClick={handleManualCreateClose}>Cancel</Button>
+              <Button colorScheme="orange" onClick={handleCreateTaskManually} isLoading={createTask.isPending}>Add</Button>
+            </HStack>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
 
       <Modal isOpen={aiPromptDisclosure.isOpen} onClose={aiPromptDisclosure.onClose}>
         <ModalOverlay />
