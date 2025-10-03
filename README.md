@@ -106,6 +106,15 @@ curl -X POST http://localhost:8000/v1/habits \
 ### Real-time Updates
 The frontend opens a WebSocket connection at `ws://localhost:8000/ws/dashboard`. Any task or habit update triggers a broadcast so that all connected devices stay in sync.
 
+### AI Sidekick
+- Launch the AI Sidekick modal by clicking the ✨ icon on tasks, habits, or schedule cards. The panel fetches `/v1/ai/suggest` and lets you apply suggestions in one click.
+- Configure providers with environment variables in `api/.env`:
+  - `AI_PROVIDER` – `gemini` (default) or `openai`
+  - `GEMINI_API_KEY` / `OPENAI_API_KEY` – credentials for the selected provider
+  - `AI_MAX_TOKENS` and `AI_SUGGEST_RATE_LIMIT` (per minute, defaults to 800 and 30 respectively)
+- No keys? The backend ships with a deterministic stub so local development always returns valid suggestions.
+- Feedback buttons in the modal POST to `/v1/ai/feedback`; monitor the `ai_feedback` collection to tune future prompts.
+
 ## API Endpoints
 
 ### Users
