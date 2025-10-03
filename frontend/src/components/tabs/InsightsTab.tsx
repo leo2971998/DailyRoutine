@@ -48,6 +48,9 @@ const InsightsTab = () => {
     refetch: refetchMonthly
   } = useMonthlyInsight(user?._id || '', monthlyDate || undefined, forceRefresh);
 
+  const normalizedDailyError = (dailyError as Error | null | undefined) ?? null;
+  const normalizedMonthlyError = (monthlyError as Error | null | undefined) ?? null;
+
   const tabListBg = useColorModeValue('rgba(255, 255, 255, 0.88)', 'whiteAlpha.100');
   const tabColor = useColorModeValue('text.muted', 'whiteAlpha.800');
   const selectedTabStyles = useColorModeValue(
@@ -191,7 +194,7 @@ const InsightsTab = () => {
                 <InsightsCard
                   title="Today's AI Insights"
                   isLoading={isDailyLoading}
-                  error={dailyError}
+                  error={normalizedDailyError}
                   onRefresh={handleRefresh}
                 >
                   {dailyInsight && <DailyInsightContent insight={dailyInsight} />}
@@ -240,7 +243,7 @@ const InsightsTab = () => {
                 <InsightsCard
                   title="Monthly AI Insights"
                   isLoading={isMonthlyLoading}
-                  error={monthlyError}
+                  error={normalizedMonthlyError}
                   onRefresh={handleRefresh}
                 >
                   {monthlyInsight && <MonthlyInsightContent insight={monthlyInsight} />}
